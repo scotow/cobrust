@@ -1,0 +1,14 @@
+[package]
+name = "cobrust"
+version = "0.1.0"
+authors = ["Scotow <contact@scotow.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+warp = "0.3"
+futures = "0.3"
+tokio = { version = "1.6", features = ["full"] }
+env_logger = "0.8"
+rand = "0.8"

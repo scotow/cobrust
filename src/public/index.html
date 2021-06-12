@@ -1,0 +1,74 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            color: white;
+            background: #131313;
+        }
+
+        canvas {
+            background: black;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', documentReady, false);
+
+        function documentReady() {
+            let socket = new WebSocket(`ws://${location.host}/ws`);
+            socket.addEventListener('open', () => {
+                socketReady(socket);
+            });
+        }
+
+        function socketReady(socket) {
+            socket.addEventListener('message', function (event) {
+                let canvas = document.querySelector('canvas');
+                let context = canvas.getContext('2d');
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.fillStyle = 'white';
+
+                let rows = event.data.split('\n');
+                for (let y = 0; y < rows.length; y++) {
+                    for (let x = 0; x < rows[y].length; x++) {
+                        switch (rows[y][x]) {
+                            case '#':
+                                context.fillRect(x * 50 + 2, y * 50 + 2, 46, 46);
+                                break;
+                        }
+                    }
+                }
+            });
+
+            window.addEventListener('keydown', (event) => {
+                let key;
+                switch (event.code) {
+                    case 'ArrowUp':
+                    case 'KeyW':
+                        key = 0;
+                        break;
+                    case 'ArrowDown':
+                    case 'KeyS':
+                        key = 1;
+                        break;
+                    case 'ArrowLeft':
+                    case 'KeyA':
+                        key = 2;
+                        break;
+                    case 'ArrowRight':
+                    case 'KeyD':
+                        key = 3;
+                        break;
+                    default:
+                        return;
+                }
+                socket.send(new Uint8Array([1, key]));
+            });
+        }
+    </script>
+</head>
+<body>
+    <canvas width="800" height="800"></canvas>
+</body>
+</html>
