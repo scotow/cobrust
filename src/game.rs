@@ -8,6 +8,7 @@ use futures::{SinkExt};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use tokio::task;
+use futures::stream::SplitStream;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Cell {
@@ -28,15 +29,15 @@ impl Into<char> for Cell {
 }
 
 pub struct Game {
-    grid: Mutex<Vec<Vec<Cell>>>,
-    players: Mutex<Vec<Arc<Player>>>
+    grid: Arc<Mutex<Vec<Vec<Cell>>>>,
+    players: Arc<Mutex<Vec<Arc<Player>>>>,
 }
 
 impl Game {
     pub fn new() -> Self {
         Self {
-            grid: Mutex::new(vec![vec![Cell::Empty; 16]; 16]),
-            players: Mutex::new(Vec::new()),
+            grid: Arc::new(Mutex::new(vec![vec![Cell::Empty; 16]; 16])),
+            players: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -52,9 +53,9 @@ impl Game {
     }
 
     async fn walk_snakes(&self, players: &[Arc<Player>]) {
+        let changes = join_all(players.iter().map(|p| p.walk())).await;
         let mut grid = self.grid.lock().await;
-        join_all(players.iter().map(|p| p.walk())).await
-            .into_iter()
+        changes.into_iter()
             .filter_map(|c| c)
             .for_each(|(r, n)| {
                 if let Some(removed) = r {
@@ -79,13 +80,28 @@ impl Game {
     pub async fn add_player(&self, socket: WebSocket) {
         let (player, rx, head) = Player::new(socket);
         let player = Arc::new(player);
+        self.player_loop(Arc::clone(&player), rx);
 
-        let player_loop = Arc::clone(&player);
-        task::spawn(async move {
-            player_loop.listen(rx).await;
-        });
         self.grid.lock().await[head.y][head.x] = Cell::Occupied;
         self.players.lock().await.push(player);
+    }
+
+    fn player_loop(&self, player: Arc<Player>, rx: SplitStream<WebSocket>) {
+        let players = Arc::clone(&self.players);
+        let grid = Arc::clone(&self.grid);
+        task::spawn(async move {
+            player.listen(rx).await;
+
+            let mut players = players.lock().await;
+            if let Some(index) = players.iter().position(|p| p.id == player.id) {
+                players.remove(index);
+            }
+            drop(players);
+
+            let mut grid = grid.lock().await;
+            player.body.lock().await.iter()
+                .for_each(|&c| grid[c.y][c.x] = Cell::Empty);
+        });
     }
 
     async fn ascii_grid(&self) -> String {

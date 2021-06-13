@@ -8,7 +8,8 @@ use rand::Rng;
 
 #[derive(Debug)]
 pub struct Player {
-    body: Mutex<VecDeque<Coord>>,
+    pub id: usize,
+    pub body: Mutex<VecDeque<Coord>>,
     direction: Mutex<Option<Dir>>,
     directions_queue: Mutex<VecDeque<Dir>>,
     growth: Mutex<u16>,
@@ -21,6 +22,7 @@ impl Player {
         let mut rng = rand::thread_rng();
         let head = Coord { x: rng.gen_range(0..16), y: rng.gen_range(0..16) };
         (Self {
+            id: rng.gen(),
             body: Mutex::new(VecDeque::from(vec![head])),
             direction: Mutex::new(None),
             directions_queue: Mutex::new(VecDeque::with_capacity(8)),
@@ -31,6 +33,10 @@ impl Player {
 
     pub async fn listen(&self, mut rx: SplitStream<WebSocket>) {
         while let Some(Ok(message)) = rx.next().await {
+            if message.is_close() {
+                break
+            }
+
             let new = match message.as_bytes()[1] {
                 0 => Dir { x: 0, y: -1 },
                 1 => Dir { x: 0, y: 1 },
