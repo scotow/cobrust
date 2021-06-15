@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use std::sync::Arc;
 use tokio::task;
 use futures::stream::SplitStream;
-use crate::coord::Coord;
+use crate::coordinate::Coord;
 use rand::Rng;
 use std::collections::HashMap;
 

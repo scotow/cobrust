@@ -7,7 +7,9 @@ use warp::ws::WebSocket;
 
 mod game;
 mod player;
-mod coord;
+mod coordinate;
+mod direction;
+mod size;
 
 #[tokio::main]
 async fn main() {

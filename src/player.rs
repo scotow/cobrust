@@ -1,9 +1,13 @@
-use crate::coord::{Coord, Dir};
+use crate::coordinate::Coord;
+use crate::direction::Dir;
 use tokio::sync::Mutex;
 use std::collections::VecDeque;
 use futures::stream::{SplitSink, SplitStream};
 use warp::ws::{Message, WebSocket};
 use futures::{StreamExt};
+use std::convert::TryFrom;
+use warp::fs::dir;
+use crate::size::Size;
 
 #[derive(Debug)]
 pub struct Player {
@@ -31,20 +35,13 @@ impl Player {
     }
 
     pub async fn process(&self, message: Message) {
-        let new = match message.as_bytes()[1] {
-            0 => Dir { x: 0, y: -1 },
-            1 => Dir { x: 0, y: 1 },
-            2 => Dir { x: -1, y: 0 },
-            3 => Dir { x: 1, y: 0 },
-            _ => return
+        let new = match Dir::try_from(message.as_bytes()[1]) {
+            Ok(dir) => dir,
+            Err(_) => return,
         };
 
         let mut direction = self.direction.lock().await;
-        let last = if let Some(dir) = direction.queue.back().copied() {
-            Some(dir)
-        } else {
-            direction.current
-        };
+        let last = direction.queue.back().copied().or(direction.current);
         if let Some(dir) = last {
             if !dir.conflict(&new) {
                 direction.queue.push_back(new);
@@ -67,11 +64,8 @@ impl Player {
             }
         };
 
-        let current_head = self.body.get(0).unwrap();
-        let new_head = Coord {
-            x: (current_head.x as isize + new_direction.x as isize).rem_euclid(16) as usize,
-            y: (current_head.y as isize + new_direction.y as isize).rem_euclid(16) as usize,
-        };
+        let current_head = *self.body.get(0).unwrap();
+        let new_head = current_head + (new_direction, Size { width: 16, height: 16 });
         self.body.push_front(new_head);
 
         let tail = if self.growth >= 1 {
