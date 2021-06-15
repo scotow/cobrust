@@ -135,7 +135,7 @@ impl Game {
     }
 
     async fn broadcast_grid(&self, inner: &Inner) {
-        let message = Message::text(self.ascii_grid(&inner.grid).await);
+        let message = Message::text(self.ascii_grid(&inner.grid));
         join_all(inner.players.values()
             .map(|p| {
                 let message = message.clone();
@@ -146,7 +146,7 @@ impl Game {
         ).await;
     }
 
-    async fn ascii_grid(&self, grid: &[Vec<Cell>]) -> String {
+    fn ascii_grid(&self, grid: &[Vec<Cell>]) -> String {
         let mut ascii = String::with_capacity(grid.len() * (grid[0].len() + 1));
         for row in grid {
             for &cell in row {

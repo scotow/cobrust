@@ -6,7 +6,6 @@ use futures::stream::{SplitSink, SplitStream};
 use warp::ws::{Message, WebSocket};
 use futures::{StreamExt};
 use std::convert::TryFrom;
-use warp::fs::dir;
 use crate::size::Size;
 
 #[derive(Debug)]

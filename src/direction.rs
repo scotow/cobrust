@@ -1,6 +1,4 @@
 use std::convert::TryFrom;
-use std::ops::Add;
-use crate::coordinate::Coord;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Dir {
