@@ -32,6 +32,7 @@
 
         function documentReady() {
             let socket = new WebSocket(`ws://${location.host}/ws`);
+            socket.binaryType = 'arraybuffer';
             socket.addEventListener('open', () => {
                 socketReady(socket);
             });
@@ -44,16 +45,15 @@
                 context.clearRect(0, 0, canvas.width, canvas.height);
                 context.fillStyle = 'white';
 
-                let rows = event.data.split('\n');
-                for (let y = 0; y < rows.length; y++) {
-                    for (let x = 0; x < rows[y].length; x++) {
-                        switch (rows[y][x]) {
-                            case '#':
+                const grid = new Uint8Array(event.data);
+                for (let y = 0; y < 16; y++) {
+                    for (let x = 0; x < 16; x++) {
+                        switch (grid[y * 16 + x]) {
+                            case 1:
                                 context.fillStyle = 'white';
                                 context.fillRect(x * 50 + 2, y * 50 + 2, 46, 46);
                                 break;
-                            case 'o':
-                                console.log('here');
+                            case 2:
                                 context.fillStyle = 'red';
                                 context.beginPath();
                                 context.arc(x * 50 + 25, y * 50 + 25, 12, 0, 2 * Math.PI);
