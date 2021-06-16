@@ -24,9 +24,6 @@ async fn main() {
         game_loop.run().await;
     });
 
-    let index = warp::path::end()
-        .and(warp::fs::file("src/public/index.html"));
-
     let ws = warp::path("ws")
         .and(warp::any().map(move || Arc::clone(&game)))
         .and(warp::ws())
@@ -34,7 +31,7 @@ async fn main() {
             websocket.on_upgrade(move |socket| user_connected(game, socket))
         });
 
-    warp::serve(index.or(ws)).run(([0, 0, 0, 0], 3030)).await;
+    warp::serve(warp::fs::dir("src/public").or(ws)).run(([0, 0, 0, 0], 3030)).await;
 }
 
 async fn user_connected(game: Arc<Game>, socket: WebSocket) {

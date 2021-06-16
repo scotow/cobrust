@@ -50,7 +50,7 @@ impl Player {
         }
     }
 
-    pub async fn walk(&mut self) -> Option<(Option<Coord>, Coord)> {
+    pub async fn walk(&mut self, grid_size: Size) -> Option<(Option<Coord>, Coord)> {
         let mut direction = self.direction.lock().await;
         let new_direction = if !direction.queue.is_empty() {
             let dir = direction.queue.pop_front().unwrap();
@@ -64,7 +64,7 @@ impl Player {
         };
 
         let current_head = *self.body.get(0).unwrap();
-        let new_head = current_head + (new_direction, Size { width: 16, height: 16 });
+        let new_head = current_head + (new_direction, grid_size);
         self.body.push_front(new_head);
 
         let tail = if self.growth >= 1 {

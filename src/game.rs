@@ -27,7 +27,7 @@ struct Inner {
 
 impl Game {
     pub fn new() -> Self {
-        let size = Size { width: 16, height: 16 };
+        let size = Size { width: 60, height: 40 };
         Self {
             size,
             inner: Arc::new(Mutex::new(Inner {
@@ -58,7 +58,9 @@ impl Game {
 
         let id = rand::random();
         let head = self.safe_place(&inner.grid);
-        let (player, rx) = Player::new(socket, head);
+        let (mut player, rx) = Player::new(socket, head);
+        let _ = player.sink.send(Message::binary(vec![0, self.size.width as u8, self.size.height as u8])).await;
+
         let player = Arc::new(Mutex::new(player));
         self.player_loop(id, Arc::clone(&player), rx);
 
@@ -98,7 +100,7 @@ impl Game {
             inner.players.values().map(|p| {
                 async move {
                     p.lock().await
-                        .walk().await
+                        .walk(self.size).await
                         .map(|cs| (Arc::clone(p), cs))
                 }
             })).await;
@@ -138,7 +140,7 @@ impl Game {
     }
 
     async fn broadcast_grid(&self, inner: &Inner) {
-        let message = Message::binary(self.bytes_grid(&inner.grid));
+        let message = Message::binary([vec![1], self.bytes_grid(&inner.grid)].concat());
         join_all(inner.players.values()
             .map(|p| {
                 let message = message.clone();
