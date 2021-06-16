@@ -77,6 +77,10 @@ impl Player {
         Some((tail, new_head))
     }
 
+    pub fn grow(&mut self, grow: u16) {
+        self.growth += grow;
+    }
+
     pub async fn respawn(&mut self, head: Coord) {
         self.body.clear();
         self.body.push_front(head);

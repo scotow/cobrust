@@ -2,7 +2,7 @@ use crate::player::Player;
 use tokio::time::sleep;
 use std::time::Duration;
 use futures::future::join_all;
-use std::fmt::{Debug, Write};
+use std::fmt::Write;
 use warp::ws::{Message, WebSocket};
 use futures::{SinkExt, StreamExt};
 use tokio::sync::Mutex;
@@ -10,28 +10,13 @@ use std::sync::Arc;
 use tokio::task;
 use futures::stream::SplitStream;
 use crate::coordinate::Coord;
-use rand::Rng;
 use std::collections::HashMap;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Cell {
-    Empty,
-    Perk,
-    Occupied,
-}
-
-impl Into<char> for Cell {
-    fn into(self) -> char {
-        use Cell::*;
-        match self {
-            Empty => '.',
-            Perk => unreachable!(),
-            Occupied => '#',
-        }
-    }
-}
+use crate::perk::Food;
+use crate::cell::Cell;
+use crate::size::Size;
 
 pub struct Game {
+    size: Size,
     inner: Arc<Mutex<Inner>>,
 }
 
@@ -42,30 +27,37 @@ struct Inner {
 
 impl Game {
     pub fn new() -> Self {
+        let size = Size { width: 16, height: 16 };
         Self {
+            size,
             inner: Arc::new(Mutex::new(Inner {
-                grid: vec![vec![Cell::Empty; 16]; 16],
+                grid: vec![vec![Cell::Empty; size.width]; size.height],
                 players: HashMap::new(),
-            }))
+            })),
         }
     }
 
     pub async fn run(&self) {
-        loop {
+        {
             let mut inner = self.inner.lock().await;
-            self.walk_snakes(&mut inner).await;
-            self.broadcast_grid(&inner).await;
-            drop(inner);
+            self.spawn_food(&mut inner.grid);
+        }
 
+        loop {
+            {
+                let mut inner = self.inner.lock().await;
+                self.walk_snakes(&mut inner).await;
+                self.broadcast_grid(&inner).await;
+            }
             sleep(Duration::from_millis(50)).await;
         }
     }
 
     pub async fn add_player(&self, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
-        let head = self.safe_place(&inner.grid);
 
         let id = rand::random();
+        let head = self.safe_place(&inner.grid);
         let (player, rx) = Player::new(socket, head);
         let player = Arc::new(Mutex::new(player));
         self.player_loop(id, Arc::clone(&player), rx);
@@ -87,21 +79,16 @@ impl Game {
 
             let mut inner = inner.lock().await;
             inner.players.remove(&id);
-
             player.lock().await.body.iter()
                 .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
         });
     }
 
     fn safe_place(&self, grid: &[Vec<Cell>]) -> Coord {
-        let mut rng = rand::thread_rng();
         loop {
-            let tmp = Coord {
-                x: rng.gen_range(0..16),
-                y: rng.gen_range(0..16),
-            };
-            if grid[tmp.y][tmp.x] == Cell::Empty {
-                return tmp;
+            let coord = Coord::random(self.size);
+            if matches!(grid[coord.y][coord.x], Cell::Empty) {
+                return coord;
             }
         }
     }
@@ -121,17 +108,33 @@ impl Game {
             if let Some(removed) = removed {
                 inner.grid[removed.y][removed.x] = Cell::Empty;
             }
-            if inner.grid[new.y][new.x] == Cell::Occupied {
-                let mut player = player.lock().await;
-                player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
 
-                let head = self.safe_place(&inner.grid);
-                player.respawn(head).await;
-                inner.grid[head.y][head.x] = Cell::Occupied;
-            } else {
-                inner.grid[new.y][new.x] = Cell::Occupied;
+            let target = &mut inner.grid[new.y][new.x];
+            match target {
+                Cell::Empty => {
+                    *target = Cell::Occupied;
+                },
+                Cell::Occupied => {
+                    let mut player = player.lock().await;
+                    player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
+
+                    let head = self.safe_place(&inner.grid);
+                    player.respawn(head).await;
+                    inner.grid[head.y][head.x] = Cell::Occupied;
+                },
+                Cell::Perk(perk) => {
+                    let mut player = player.lock().await;
+                    perk.consume(&mut player);
+                    *target = Cell::Occupied;
+                    self.spawn_food(&mut inner.grid);
+                },
             }
         }
+    }
+
+    fn spawn_food(&self, grid: &mut [Vec<Cell>]) {
+        let food = self.safe_place(grid);
+        grid[food.y][food.x] = Cell::Perk(Box::new(Food));
     }
 
     async fn broadcast_grid(&self, inner: &Inner) {
@@ -149,8 +152,8 @@ impl Game {
     fn ascii_grid(&self, grid: &[Vec<Cell>]) -> String {
         let mut ascii = String::with_capacity(grid.len() * (grid[0].len() + 1));
         for row in grid {
-            for &cell in row {
-                ascii.write_char(cell.into()).unwrap();
+            for cell in row {
+                ascii.write_char(cell.as_char()).unwrap();
             }
             ascii.write_char('\n').unwrap();
         }

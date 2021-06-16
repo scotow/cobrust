@@ -10,6 +10,8 @@ mod player;
 mod coordinate;
 mod direction;
 mod size;
+mod perk;
+mod cell;
 
 #[tokio::main]
 async fn main() {

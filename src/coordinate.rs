@@ -1,11 +1,22 @@
 use std::ops::{Add, Rem};
 use crate::direction::Dir;
 use crate::size::Size;
+use rand::Rng;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Coord {
     pub x: usize,
     pub y: usize,
+}
+
+impl Coord {
+    pub fn random(size: Size) -> Self {
+        let mut rng = rand::thread_rng();
+        Self {
+            x: rng.gen_range(0..size.width),
+            y: rng.gen_range(0..size.height),
+        }
+    }
 }
 
 impl Add<(Dir, Size)> for Coord {
