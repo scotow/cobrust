@@ -26,8 +26,7 @@ struct Inner {
 }
 
 impl Game {
-    pub fn new() -> Self {
-        let size = Size { width: 60, height: 40 };
+    pub fn new(size: Size) -> Self {
         Self {
             size,
             inner: Arc::new(Mutex::new(Inner {

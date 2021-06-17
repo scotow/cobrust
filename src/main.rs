@@ -4,6 +4,8 @@ use warp::Filter;
 use crate::game::Game;
 use std::sync::Arc;
 use warp::ws::WebSocket;
+use std::convert::TryInto;
+use crate::size::Size;
 
 mod game;
 mod player;
@@ -17,7 +19,11 @@ mod cell;
 async fn main() {
     env_logger::init();
 
-    let game = Arc::new(Game::new());
+    let [width, height]: [usize; 2] = std::env::args().skip(1)
+        .map(|s| s.parse::<usize>().unwrap())
+        .collect::<Vec<_>>()
+        .try_into().unwrap();
+    let game = Arc::new(Game::new(Size { width, height }));
 
     let game_loop = Arc::clone(&game);
     task::spawn(async move {

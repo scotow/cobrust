@@ -23,14 +23,14 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            /* object-fit: contain; */
-            height: 80vh;
-            background: black;
-            border: 5px solid gray;
+            width: 90%;
+            height: 90%;
+            object-fit: contain;
             transform: translate(-50%, -50%);
         }
     </style>
     <script>
+        const BORDER_WIDTH = 5;
         const CELL_SIZE = 50;
         
         let currentGame = null;
@@ -89,27 +89,33 @@
             const height = data[1];
 
             const canvas = document.createElement('canvas');
-            canvas.width = width * CELL_SIZE;
-            canvas.height = height * CELL_SIZE;
+            canvas.width = width * CELL_SIZE + 2 * BORDER_WIDTH;
+            canvas.height = height * CELL_SIZE + 2 * BORDER_WIDTH;
             document.body.append(canvas);
+
+            const context = canvas.getContext('2d');
+            context.strokeStyle = 'white';
+            context.lineWidth = BORDER_WIDTH;
+            context.strokeRect(0, 0, canvas.width, canvas.height);
 
             currentGame = { width, height, canvas };
         }
 
         function drawGrid(grid) {
             const context = currentGame.canvas.getContext('2d');
-            context.clearRect(0, 0, currentGame.canvas.width, currentGame.canvas.height);
+            context.fillStyle = 'black';
+            context.fillRect(BORDER_WIDTH, BORDER_WIDTH, currentGame.canvas.width - 2 * BORDER_WIDTH, currentGame.canvas.height - 2 * BORDER_WIDTH);
             for (let y = 0; y < currentGame.height; y++) {
                 for (let x = 0; x < currentGame.width; x++) {
                     switch (grid[y * currentGame.width + x]) {
                         case 1:
                             context.fillStyle = 'white';
-                            context.fillRect(x * CELL_SIZE + 2, y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                            context.fillRect(BORDER_WIDTH + x * CELL_SIZE + 2, BORDER_WIDTH + y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
                             break;
                         case 2:
                             context.fillStyle = 'red';
                             context.beginPath();
-                            context.arc(x * CELL_SIZE + CELL_SIZE / 2, y * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
+                            context.arc(BORDER_WIDTH + x * CELL_SIZE + CELL_SIZE / 2, BORDER_WIDTH + y * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
                             context.fill();
                             break;
                     }
