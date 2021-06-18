@@ -3,7 +3,7 @@ use crate::direction::Dir;
 use crate::size::Size;
 use rand::Rng;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Coord {
     pub x: usize,
     pub y: usize,

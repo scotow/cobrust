@@ -14,6 +14,7 @@ mod direction;
 mod size;
 mod perk;
 mod cell;
+mod packet;
 
 #[tokio::main]
 async fn main() {

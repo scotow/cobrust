@@ -8,6 +8,8 @@ use futures::{StreamExt};
 use std::convert::TryFrom;
 use crate::size::Size;
 
+const START_SIZE: u16 = 9;
+
 #[derive(Debug)]
 pub struct Player {
     pub body: VecDeque<Coord>,
@@ -28,7 +30,7 @@ impl Player {
         (Self {
             body: VecDeque::from(vec![head]),
             direction: Mutex::new(Direction::default()),
-            growth: 10,
+            growth: START_SIZE,
             sink:tx,
         }, rx)
     }
@@ -87,6 +89,6 @@ impl Player {
         let mut direction = self.direction.lock().await;
         direction.current = None;
         direction.queue.clear();
-        self.growth = 10;
+        self.growth = START_SIZE;
     }
 }

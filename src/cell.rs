@@ -1,9 +1,10 @@
 use crate::perk::Perk;
+use std::sync::Arc;
 
 pub enum Cell {
     Empty,
     Occupied,
-    Perk(Box<dyn Perk + Send + Sync>),
+    Perk(Arc<Box<dyn Perk + Send + Sync>>),
 }
 
 impl Cell {

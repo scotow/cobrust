@@ -47,15 +47,26 @@
 
         function socketReady(socket) {
             socket.addEventListener('message', function (event) {
-                const data = new Uint8Array(event.data);
-                switch (data[0]) {
+                switch (new Uint8Array(event.data, 0, 1)[0]) {
                     case 0:
-                        setupCanvas(data.slice(1));
+                        setupCanvas(new Uint16Array(event.data.slice(1)));
                         break;
                     case 1:
-                        drawGrid(data.slice(1));
+                        setupSnakes(new Uint16Array(event.data.slice(1)));
                         break;
-                }                
+                    case 2:
+                        perkSpawned(new Uint16Array(event.data.slice(1)));
+                        break;
+                    case 3:
+                        playerJoined(new Uint16Array(event.data.slice(1)));
+                        break;
+                    case 4:
+                        playerLeft(new Uint16Array(event.data.slice(1)));
+                        break;
+                    case 5:
+                        gridChanged(new Uint16Array(event.data.slice(1)));
+                        break;
+                }
             });
 
             window.addEventListener('keydown', (event) => {
@@ -101,24 +112,102 @@
             currentGame = { width, height, canvas };
         }
 
-        function drawGrid(grid) {
+        function drawSnakes() {
             const context = currentGame.canvas.getContext('2d');
             context.fillStyle = 'black';
             context.fillRect(BORDER_WIDTH, BORDER_WIDTH, currentGame.canvas.width - 2 * BORDER_WIDTH, currentGame.canvas.height - 2 * BORDER_WIDTH);
-            for (let y = 0; y < currentGame.height; y++) {
-                for (let x = 0; x < currentGame.width; x++) {
-                    switch (grid[y * currentGame.width + x]) {
-                        case 1:
-                            context.fillStyle = 'white';
+            context.fillStyle = 'white';
+            for (const id in currentGame.players) {
+                for (const { x, y } of currentGame.players[id]) {
+                    context.fillRect(BORDER_WIDTH + x * CELL_SIZE + 2, BORDER_WIDTH + y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                }
+            }
+        }
+
+        function setupSnakes(data) {
+            currentGame.players = {};
+
+            let i = 0;
+            while (i < data.length) {
+                const id = data[i];
+                const size = data[i + 1];
+                const body = [];
+                for (let j = 0; j < size; j++) {
+                    body.push({ x: data[i + 2 + j * 2], y: data[i + 2 + j * 2 + 1] });
+                }
+                i += 2 + 2 * size;
+                currentGame.players[id] = body;
+            }
+
+            drawSnakes();
+        }
+
+        function perkSpawned(data) {
+            const context = currentGame.canvas.getContext('2d');
+            context.fillStyle = 'red';
+            context.beginPath();
+            context.arc(BORDER_WIDTH + data[0] * CELL_SIZE + CELL_SIZE / 2, BORDER_WIDTH + data[1] * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
+            context.fill();
+        }
+
+        function playerJoined(data) {
+            const context = currentGame.canvas.getContext('2d');
+            const head = {
+                x: data[1],
+                y: data[2],
+            };
+
+            context.fillStyle = 'white';
+            context.fillRect(BORDER_WIDTH + head.x * CELL_SIZE + 2, BORDER_WIDTH + head.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            currentGame.players[data[0]] = [head];
+        }
+
+        function playerLeft(data) {
+            const id = data[0];
+            const context = currentGame.canvas.getContext('2d');
+            context.fillStyle = 'black';
+            for (const { x, y } of currentGame.players[id]) {
+                context.fillRect(BORDER_WIDTH + x * CELL_SIZE + 2, BORDER_WIDTH + y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            }
+            delete currentGame.players[id];
+        }
+
+        function gridChanged(data) {
+            const context = currentGame.canvas.getContext('2d');
+            
+            let i = 0;
+            while (i < data.length) {
+                switch (data[i++]) {
+                    case 0: {
+                        const { x, y } = currentGame.players[data[i++]].pop();
+                        context.fillStyle = 'black';
+                        context.fillRect(BORDER_WIDTH + x * CELL_SIZE + 2, BORDER_WIDTH + y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    } break;
+                    case 1: {
+                        const id = data[i++];
+                        const head = {
+                            x: data[i++],
+                            y: data[i++],
+                        };
+                        currentGame.players[id].unshift(head);
+                        context.fillStyle = 'white';
+                        context.fillRect(BORDER_WIDTH + head.x * CELL_SIZE + 2, BORDER_WIDTH + head.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    } break;
+                    case 2: {
+                        const id = data[i++];
+                        context.fillStyle = 'black';
+                        for (const { x, y } of currentGame.players[id]) {
                             context.fillRect(BORDER_WIDTH + x * CELL_SIZE + 2, BORDER_WIDTH + y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                            break;
-                        case 2:
-                            context.fillStyle = 'red';
-                            context.beginPath();
-                            context.arc(BORDER_WIDTH + x * CELL_SIZE + CELL_SIZE / 2, BORDER_WIDTH + y * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
-                            context.fill();
-                            break;
-                    }
+                        }
+
+                        const head = {
+                            x: data[i++],
+                            y: data[i++],
+                        };
+                        currentGame.players[id] = [head];
+                        context.fillStyle = 'white';
+                        context.fillRect(BORDER_WIDTH + head.x * CELL_SIZE + 2, BORDER_WIDTH + head.y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                    } break;
                 }
             }
         }
