@@ -42,14 +42,13 @@ impl Game {
     pub async fn run(&self) {
         {
             let mut inner = self.inner.lock().await;
-            self.spawn_food(&mut inner).await;
+            for _ in 0..5 {
+                self.spawn_food(&mut inner).await;
+            }
         }
 
         loop {
-            {
-                let mut inner = self.inner.lock().await;
-                self.walk_snakes(&mut inner).await;
-            }
+            self.walk_snakes(&mut *self.inner.lock().await).await;
             sleep(Duration::from_millis(50)).await;
         }
     }
@@ -72,7 +71,9 @@ impl Game {
         let snakes_message = Packet::Snakes(&inner.players).message().await;
         let mut player = player.lock().await;
         let _ = player.sink.send(snakes_message).await;
-        let _ = player.sink.send(Packet::Perk(*inner.perks.keys().next().unwrap()).message().await).await;
+        for &coord in inner.perks.keys() {
+            let _ = player.sink.send(Packet::Perk(coord).message().await).await;
+        }
     }
 
     fn player_loop(&self, id: u16, player: Arc<Mutex<Player>>, mut rx: SplitStream<WebSocket>) {
@@ -159,11 +160,14 @@ impl Game {
     }
 
     async fn broadcast_message(inner: &Inner, message: Message) {
+        if inner.players.is_empty() {
+            return;
+        }
         join_all(inner.players.values()
             .map(|p| {
                 let message = message.clone();
                 async move {
-                    let _ = p.lock().await.sink.send(message).await;
+                    p.lock().await.sink.send(message).await.unwrap();
                 }
             })
         ).await;
