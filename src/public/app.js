@@ -12,7 +12,7 @@ class Game {
         this.canvas.height = size.height * CELL_SIZE + 2 * BORDER_WIDTH;
         this.context = this.canvas.getContext('2d');
         this.emptyCanvas();
-        document.body.append(this.canvas);
+        document.getElementById('game').append(this.canvas);
     }
 
     emptyCanvas() {
@@ -114,11 +114,14 @@ class Game {
         this.context.fill();
     }
 }
-
-const socket = new WebSocket(`ws://${location.host}/ws`);
-socket.binaryType = 'arraybuffer';
-socket.addEventListener('open', () => {
-    socketReady(socket);
+document.querySelector('#lobby > .games').addEventListener('click', (event) => {
+    if (event.target.classList.contains('join')) {
+        const socket = new WebSocket(`${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}/ws`);
+        socket.binaryType = 'arraybuffer';
+        socket.addEventListener('open', () => {
+            socketReady(socket);
+        });
+    }
 });
 
 function socketReady(socket) {
