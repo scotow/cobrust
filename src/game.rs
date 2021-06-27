@@ -40,15 +40,18 @@ impl Game {
     }
 
     pub async fn run(&self) {
-        {
-            let mut inner = self.inner.lock().await;
-            for _ in 0..5 {
-                self.spawn_food(&mut inner).await;
-            }
+        let mut inner = self.inner.lock().await;
+        for _ in 0..5 {
+            self.spawn_food(&mut inner).await;
         }
+        drop(inner);
 
         loop {
-            self.walk_snakes(&mut *self.inner.lock().await).await;
+            let mut inner = self.inner.lock().await;
+            if !inner.players.is_empty() {
+                self.walk_snakes(&mut inner).await;
+            }
+            drop(inner);
             sleep(Duration::from_millis(50)).await;
         }
     }
