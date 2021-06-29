@@ -129,8 +129,23 @@ body {
 
 #lobby > .games > .content > .game > .separator {
     width: 1px;
-    margin: 4px 14px;
+    margin: 4px 10px;
     background: white;
+}
+
+#lobby > .games > .content > .game > .size {
+    font-size: 16px;
+}
+
+#lobby > .games > .content > .game > .size::after {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-left: 6px;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIGlkPSJMYXllcl8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4PSIwcHgiIHk9IjBweCIKCSB2aWV3Qm94PSIwIDAgNTEyIDUxMiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNTEyIDUxMjsiIHhtbDpzcGFjZT0icHJlc2VydmUiIGZpbGw9IndoaXRlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbC1ydWxlOmV2ZW5vZGQ7Y2xpcC1ydWxlOmV2ZW5vZGQ7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0wLDQ4QzAsMjEuNSwyMS41LDAsNDgsMGg0MTZjMjYuNSwwLDQ4LDIxLjUsNDgsNDh2NDE2YzAsMjYuNS0yMS41LDQ4LTQ4LDQ4SDQ4Yy0yNi41LDAtNDgtMjEuNS00OC00OFY0OHoKCQkgTTQ4LDMyYy04LjgsMC0xNiw3LjItMTYsMTZ2MTEyaDEyOFYzMkg0OHogTTE2MCwxOTJIMzJ2MTI4aDEyOFYxOTJ6IE0xOTIsMzIwVjE5MmgxMjh2MTI4SDE5MnogTTE2MCwzNTJIMzJ2MTEyCgkJYzAsOC44LDcuMiwxNiwxNiwxNmgxMTJWMzUyeiBNMTkyLDM1MmgxMjh2MTI4SDE5MlYzNTJ6IE0zNTIsMzUydjEyOGgxMTJjOC44LDAsMTYtNy4yLDE2LTE2VjM1MkgzNTJ6IE0zNTIsMzIwaDEyOFYxOTJIMzUyVjMyMHoKCQkgTTM1MiwxNjBoMTI4VjQ4YzAtOC44LTcuMi0xNi0xNi0xNkgzNTJWMTYweiBNMzIwLDE2MEgxOTJWMzJoMTI4VjE2MHoiLz4KPC9nPgo8L3N2Zz4=);
+    vertical-align: middle;
+    transform: scale(0.9) translateY(-2px);
 }
 
 #lobby > .games > .content > .game > .players {

@@ -2,22 +2,21 @@ use crate::player::Player;
 use tokio::time::sleep;
 use std::time::Duration;
 use futures::future::join_all;
-use std::fmt::Write;
 use warp::ws::{Message, WebSocket};
-use futures::{SinkExt, StreamExt};
+use futures::StreamExt;
 use tokio::sync::Mutex;
 use std::sync::Arc;
-use tokio::task;
-use futures::stream::SplitStream;
 use crate::coordinate::Coord;
 use std::collections::HashMap;
 use crate::perk::{Food, Perk};
 use crate::cell::Cell;
 use crate::size::Size;
 use crate::packet::{Packet, SnakeChange};
+use futures::stream::SplitStream;
 
 pub struct Game {
-    size: Size,
+    pub name: String,
+    pub size: Size,
     inner: Arc<Mutex<Inner>>,
 }
 
@@ -28,8 +27,9 @@ struct Inner {
 }
 
 impl Game {
-    pub fn new(size: Size) -> Self {
+    pub fn new(name: String, size: Size) -> Self {
         Self {
+            name,
             size,
             inner: Arc::new(Mutex::new(Inner {
                 grid: vec![vec![Cell::Empty; size.width]; size.height],
@@ -56,46 +56,56 @@ impl Game {
         }
     }
 
-    pub async fn add_player(&self, socket: WebSocket) {
+    pub async fn play(&self, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
 
-        let id = rand::random();
         let head = self.safe_place(&inner.grid);
-        let (mut player, rx) = Player::new(socket, head);
-        let _ = player.sink.send(Packet::GridSize(self.size).message().await).await;
+        let (tx, rx) = socket.split();
+        let mut player = Player::new(head, tx);
+        let _ = player.send(Packet::GridSize(self.size).message().await).await;
 
+        let id = rand::random();
         let player = Arc::new(Mutex::new(player));
-        self.player_loop(id, Arc::clone(&player), rx);
-
         inner.players.insert(id, Arc::clone(&player));
         inner.grid[head.y][head.x] = Cell::Occupied;
         Game::broadcast_message(&inner, Packet::PlayerJoined(id, head).message().await).await;
 
-        let snakes_message = Packet::Snakes(&inner.players).message().await;
-        let mut player = player.lock().await;
-        let _ = player.sink.send(snakes_message).await;
-        for &coord in inner.perks.keys() {
-            let _ = player.sink.send(Packet::Perk(coord).message().await).await;
+        {
+            let snakes_message = Packet::Snakes(&inner.players).message().await;
+            let mut player = player.lock().await;
+            let _ = player.send(snakes_message).await;
+            for &coord in inner.perks.keys() {
+                let _ = player.send(Packet::Perk(coord).message().await).await;
+            }
         }
+        drop(inner);
+
+        self.player_loop(player, rx).await;
+        let mut inner = self.inner.lock().await;
+        let player = inner.players.remove(&id).unwrap();
+        player.lock().await.body.iter()
+            .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
+        Game::broadcast_message(&inner, Packet::PlayerLeft(id).message().await).await;
     }
 
-    fn player_loop(&self, id: u16, player: Arc<Mutex<Player>>, mut rx: SplitStream<WebSocket>) {
-        let inner = Arc::clone(&self.inner);
-        task::spawn(async move {
-            while let Some(Ok(message)) = rx.next().await {
-                if message.is_close() {
-                    break;
-                }
-                player.lock().await.process(message).await;
+    async fn player_loop(&self, player: Arc<Mutex<Player>>, mut rx: SplitStream<WebSocket>) {
+        loop {
+            let message = match rx.next().await {
+                Some(Ok(message)) => message,
+                _ => break,
+            };
+            if message.is_close() {
+                break;
             }
-            // Player left the game from here.
 
-            let mut inner = inner.lock().await;
-            inner.players.remove(&id);
-            player.lock().await.body.iter()
-                .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
-            Game::broadcast_message(&inner, Packet::PlayerLeft(id).message().await).await;
-        });
+            let data = message.as_bytes();
+            match data[0] {
+                0 => break,
+                1 => player.lock().await.process(&data[1..]).await,
+                _ => (),
+            }
+        };
+        // Player left the game from here.
     }
 
     fn safe_place(&self, grid: &[Vec<Cell>]) -> Coord {
@@ -170,39 +180,13 @@ impl Game {
             .map(|p| {
                 let message = message.clone();
                 async move {
-                    p.lock().await.sink.send(message).await.unwrap();
+                    p.lock().await.send(message).await;
                 }
             })
         ).await;
     }
 
-    #[allow(dead_code)]
-    async fn broadcast_grid(&self, inner: &Inner) {
-        Game::broadcast_message(
-            inner,
-            Message::binary([vec![1], self.bytes_grid(&inner.grid)].concat()),
-        ).await;
-    }
-
-    #[allow(dead_code)]
-    fn ascii_grid(&self, grid: &[Vec<Cell>]) -> String {
-        let mut ascii = String::with_capacity(grid.len() * (grid[0].len() + 1));
-        for row in grid {
-            for cell in row {
-                ascii.write_char(cell.as_char()).unwrap();
-            }
-            ascii.write_char('\n').unwrap();
-        }
-        ascii
-    }
-
-    fn bytes_grid(&self, grid: &[Vec<Cell>]) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(self.size.width * self.size.height);
-        for row in grid {
-            for cell in row {
-                bytes.push(cell.as_u8());
-            }
-        }
-        bytes
+    pub async fn player_count(&self) -> usize {
+        self.inner.lock().await.players.len()
     }
 }

@@ -1,15 +1,158 @@
 const BORDER_WIDTH = 5;
 const CELL_SIZE = 50;
 
-let currentGame = null;
+class Lobby {
+    constructor() {
+        this.games = {};
+
+        this.socket = new WebSocket(`${baseWebsocketUrl()}/lobby`);
+        this.socket.binaryType = 'arraybuffer';
+        this.socket.addEventListener('open', () => {
+            this.socket.addEventListener('message', (event) => {
+                this.processMessage(new ByteBuffer(event.data));
+            });
+        });
+    }
+
+    processMessage(data) {
+        switch (data.readUnsignedByte()) {
+            case 0:
+                this.addGames(data);
+                break;
+            case 1:
+                this.updatePlayerCount(data);
+                break;
+        }
+    }
+
+    addGames(data) {
+        while (data.available) {
+            const id = data.readUnsignedShort();
+            const nameLength = data.readUnsignedByte();
+            const name = data.readString(nameLength);
+            const size = {
+                width: data.readUnsignedShort(),
+                height: data.readUnsignedShort(),
+            };
+            const playerCount = data.readUnsignedByte();
+            this.games[String(id)] = new LobbyGame(id, { name, size, playerCount });
+        }
+    }
+
+    updatePlayerCount(data) {
+        const id = String(data.readUnsignedShort());
+        this.games[id].updatePlayerCount(String(data.readUnsignedByte()));
+    }
+}
+
+class LobbyGame {
+    constructor(id, info) {
+        this.game = document.createElement('div');
+        this.game.classList.add('game');
+
+        const name = document.createElement('div');
+        name.classList.add('name');
+        name.innerText = info.name;
+
+        const separator = document.createElement('div');
+        separator.classList.add('separator');
+
+        const size = document.createElement('div');
+        size.classList.add('size');
+        size.innerText = `${info.size.width}x${info.size.height}`;
+        
+        this.players = document.createElement('div');
+        this.players.classList.add('players');
+        this.players.innerText = String(info.playerCount);
+
+        const join = document.createElement('div');
+        join.classList.add('join');
+        join.addEventListener('click', () => {
+            new Game(id);
+        });
+
+        this.game.append(name, size, separator.cloneNode(), this.players, separator.cloneNode(), join);
+        document.querySelector('#lobby > .games > .content').append(this.game);
+    }
+
+    updatePlayerCount(playerCount) {
+        this.players.innerText = String(playerCount);
+    }
+}
 
 class Game {
-    constructor(size) {
-        this.size = size;
+    constructor(id) {
+        this.socket = new WebSocket(`${baseWebsocketUrl()}/games/${id}`);
+        this.socket.binaryType = 'arraybuffer';
+        this.socket.addEventListener('open', () => {
+            this.socket.addEventListener('message', (event) => {
+                this.processMessage(new ByteBuffer(event.data));
+            });
+
+            this.keyEventHandler = (event) => {
+                this.processKey(event);
+            }
+            window.addEventListener('keydown', this.keyEventHandler);
+        });
+    }
+
+    processMessage(data) {
+        switch (data.readUnsignedByte()) {
+            case 0:
+                this.create(data);
+                break;
+            case 1:
+                this.setPlayers(data);
+                break;
+            case 2:
+                this.drawPerk(data);
+                break;
+            case 3:
+                this.addPlayer(data);
+                break;
+            case 4:
+                this.removePlayer(data);
+                break;
+            case 5:
+                this.snakeChanges(data);
+                break;
+        }
+    }
+
+    processKey(event) {
+        let key;
+        switch (event.code) {
+            case 'ArrowUp':
+            case 'KeyW':
+                key = 0;
+                break;
+            case 'ArrowDown':
+            case 'KeyS':
+                key = 1;
+                break;
+            case 'ArrowLeft':
+            case 'KeyA':
+                key = 2;
+                break;
+            case 'ArrowRight':
+            case 'KeyD':
+                key = 3;
+                break;
+            default:
+                return;
+        }
+        this.socket.send(new Uint8Array([1, key]));
+    }
+
+    create(data) {
+        this.size = {
+            width: data.readUnsignedShort(),
+            height: data.readUnsignedShort(),
+        };
         this.players = {};
         this.canvas = document.createElement('canvas');
-        this.canvas.width = size.width * CELL_SIZE + 2 * BORDER_WIDTH;
-        this.canvas.height = size.height * CELL_SIZE + 2 * BORDER_WIDTH;
+        this.canvas.width = this.size.width * CELL_SIZE + 2 * BORDER_WIDTH;
+        this.canvas.height = this.size.height * CELL_SIZE + 2 * BORDER_WIDTH;
         this.context = this.canvas.getContext('2d');
         this.emptyCanvas();
         document.getElementById('game').append(this.canvas);
@@ -25,15 +168,14 @@ class Game {
 
     setPlayers(data) {
         this.fillMode();
-        let i = 0;
-        while (i < data.length) {
-            const id = data[i++];
-            const size = data[i++];
+        while (data.available) {
+            const id = data.readUnsignedShort();
+            const size = data.readUnsignedShort();
             const body = [];
             for (let j = 0; j < size; j++) {
                 const cell = {
-                    x: data[i++], 
-                    y: data[i++],
+                    x: data.readUnsignedShort(), 
+                    y: data.readUnsignedShort(),
                 };
                 body.push(cell);
                 this.drawCell(cell);
@@ -43,47 +185,48 @@ class Game {
     }
 
     addPlayer(data) {
+        const id = data.readUnsignedShort();
         const head = {
-            x: data[1],
-            y: data[2],
+            x: data.readUnsignedShort(),
+            y: data.readUnsignedShort(),
         };
-        this.players[data[0]] = [head];
+        this.players[id] = [head];
         this.fillMode();
         this.drawCell(head);
     }
 
     removePlayer(data) {
+        const id = data.readUnsignedShort();
         this.clearMode();
-        this.drawCell(this.players[data[0]]);
-        delete this.players[data[0]];
+        this.drawCell(this.players[id]);
+        delete this.players[id];
     }
 
     snakeChanges(data) {
-        let i = 0;
-        while (i < data.length) {
-            switch (data[i++]) {
+        while (data.available) {
+            switch (data.readUnsignedByte()) {
                 case 0: {
                     this.clearMode();
-                    this.drawCell(this.players[data[i++]].pop());
+                    this.drawCell(this.players[data.readUnsignedShort()].pop());
                 } break;
                 case 1: {
-                    const id = data[i++];
+                    const id = data.readUnsignedShort();
                     const head = {
-                        x: data[i++],
-                        y: data[i++],
+                        x: data.readUnsignedShort(),
+                        y: data.readUnsignedShort(),
                     };
                     this.players[id].unshift(head);
                     this.fillMode();
                     this.drawCell(head);
                 } break;
                 case 2: {
-                    const id = data[i++];
+                    const id = data.readUnsignedShort();
                     this.clearMode();
                     this.drawCell(this.players[id]);
     
                     const head = {
-                        x: data[i++],
-                        y: data[i++],
+                        x: data.readUnsignedShort(),
+                        y: data.readUnsignedShort(),
                     };
                     this.players[id] = [head];
                     this.fillMode();
@@ -110,70 +253,13 @@ class Game {
     drawPerk(data) {
         this.context.fillStyle = 'red';
         this.context.beginPath();
-        this.context.arc(BORDER_WIDTH + data[0] * CELL_SIZE + CELL_SIZE / 2, BORDER_WIDTH + data[1] * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
+        this.context.arc(BORDER_WIDTH + data.readUnsignedShort() * CELL_SIZE + CELL_SIZE / 2, BORDER_WIDTH + data.readUnsignedShort() * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
         this.context.fill();
     }
 }
-document.querySelector('#lobby > .games').addEventListener('click', (event) => {
-    if (event.target.classList.contains('join')) {
-        const socket = new WebSocket(`${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}/ws`);
-        socket.binaryType = 'arraybuffer';
-        socket.addEventListener('open', () => {
-            socketReady(socket);
-        });
-    }
-});
 
-function socketReady(socket) {
-    socket.addEventListener('message', function (event) {
-        const payload = new Uint16Array(event.data.slice(1));
-        switch (new Uint8Array(event.data, 0, 1)[0]) {
-            case 0:
-                currentGame = new Game({
-                    width: payload[0],
-                    height: payload[1],
-                });
-                break;
-            case 1:
-                currentGame.setPlayers(payload);
-                break;
-            case 2:
-                currentGame.drawPerk(payload);
-                break;
-            case 3:
-                currentGame.addPlayer(payload);
-                break;
-            case 4:
-                currentGame.removePlayer(payload);
-                break;
-            case 5:
-                currentGame.snakeChanges(payload);
-                break;
-        }
-    });
-
-    window.addEventListener('keydown', (event) => {
-        let key;
-        switch (event.code) {
-            case 'ArrowUp':
-            case 'KeyW':
-                key = 0;
-                break;
-            case 'ArrowDown':
-            case 'KeyS':
-                key = 1;
-                break;
-            case 'ArrowLeft':
-            case 'KeyA':
-                key = 2;
-                break;
-            case 'ArrowRight':
-            case 'KeyD':
-                key = 3;
-                break;
-            default:
-                return;
-        }
-        socket.send(new Uint8Array([1, key]));
-    });
+function baseWebsocketUrl() {
+    return `${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}`;
 }
+
+new Lobby();

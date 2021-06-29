@@ -2,9 +2,9 @@ use crate::coordinate::Coord;
 use crate::direction::Dir;
 use tokio::sync::Mutex;
 use std::collections::VecDeque;
-use futures::stream::{SplitSink, SplitStream};
+use futures::stream::SplitSink;
 use warp::ws::{Message, WebSocket};
-use futures::{StreamExt};
+use futures::SinkExt;
 use std::convert::TryFrom;
 use crate::size::Size;
 
@@ -15,7 +15,7 @@ pub struct Player {
     pub body: VecDeque<Coord>,
     direction: Mutex<Direction>,
     growth: u16,
-    pub sink: SplitSink<WebSocket, Message>,
+    sink: SplitSink<WebSocket, Message>,
 }
 
 #[derive(Debug, Default)]
@@ -25,18 +25,21 @@ struct Direction {
 }
 
 impl Player {
-    pub fn new(socket: WebSocket, head: Coord) -> (Self, SplitStream<WebSocket>) {
-        let (tx, rx) = socket.split();
-        (Self {
+    pub fn new(head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
+        Self {
             body: VecDeque::from(vec![head]),
             direction: Mutex::new(Direction::default()),
             growth: START_SIZE,
-            sink:tx,
-        }, rx)
+            sink: tx,
+        }
     }
 
-    pub async fn process(&self, message: Message) {
-        let new = match Dir::try_from(message.as_bytes()[1]) {
+    pub async fn send(&mut self, message: Message) {
+        self.sink.send(message).await.unwrap();
+    }
+
+    pub async fn process(&self, data: &[u8]) {
+        let new = match Dir::try_from(data[0]) {
             Ok(dir) => dir,
             Err(_) => return,
         };
