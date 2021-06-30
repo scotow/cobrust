@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::game::Game;
+use crate::game::{Game, Config};
 use warp::ws::{WebSocket, Message};
 use futures::{StreamExt, SinkExt};
 use tokio::sync::Mutex;
@@ -12,26 +12,13 @@ use crate::packet::Packet;
 
 pub struct Lobby {
     games: Mutex<HashMap<u16, Arc<Game>>>,
-    users: Mutex<HashMap<u16, SplitSink<WebSocket, Message>>>,
+    users: Mutex<HashMap<u16, Arc<Mutex<SplitSink<WebSocket, Message>>>>>,
 }
 
 impl Lobby {
     pub fn new() -> Self {
-        let game = Arc::new(Game::new(
-            String::from("Public Game"),
-            Size {
-                width: 32,
-                height: 32,
-            }));
-        let mut games = HashMap::new();
-        games.insert(42, Arc::clone(&game));
-
-        task::spawn(async move {
-            game.run().await;
-        });
-
         Self {
-            games: Mutex::new(games),
+            games: Mutex::new(HashMap::new()),
             users: Mutex::new(HashMap::new()),
         }
     }
@@ -42,8 +29,9 @@ impl Lobby {
 
         let games_messages = Packet::Games(&*self.games.lock().await).message().await;
         tx.send(games_messages).await.unwrap();
+        let tx = Arc::new(Mutex::new(tx));
 
-        self.users.lock().await.insert(id, tx);
+        self.users.lock().await.insert(id, Arc::clone(&tx));
         loop {
             let message = match rx.next().await {
                 Some(Ok(message)) => message,
@@ -52,8 +40,39 @@ impl Lobby {
             if message.is_close() {
                 break;
             }
+
+            let data = message.as_bytes();
+            match data[0] {
+                0 => {
+                    let id = self.create(&data[1..]).await;
+                    tx.lock().await.send(Packet::GameCreated(id).message().await).await.unwrap();
+                },
+                _ => (),
+            }
         }
         self.users.lock().await.remove(&id);
+    }
+
+    pub async fn create(&self, data: &[u8]) -> u16 {
+        let size_name = u16::from_be_bytes([data[0], data[1]]) as usize;
+        let name = String::from_utf8(data[2..(2 + size_name)].to_vec()).unwrap();
+        let size = Size {
+            width: data[2 + size_name] as usize,
+            height: data[2 + size_name + 1] as usize,
+        };
+        let foods = data[2 + size_name + 1 + 1];
+
+        let id = rand::random();
+        let game = Arc::new(Game::new(Config {
+            name,
+            size,
+            foods
+        }));
+        self.games.lock().await.insert(id, Arc::clone(&game));
+        task::spawn(async move {
+             game.run().await;
+        });
+        id
     }
 
     pub async fn play(&self, id: u16, socket: WebSocket) {
@@ -92,7 +111,7 @@ impl Lobby {
             .map(|user| {
                 let message = message.clone();
                 async move {
-                    let _ = user.send(message).await;
+                    let _ = user.lock().await.send(message).await;
                 }
             })
         ).await;

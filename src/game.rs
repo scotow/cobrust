@@ -20,32 +20,31 @@ pub struct Game {
     inner: Arc<Mutex<Inner>>,
 }
 
-struct Inner {
-    grid: Vec<Vec<Cell>>,
-    players: HashMap<u16, Arc<Mutex<Player>>>,
-    perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+pub struct Config {
+    pub name: String,
+    pub size: Size,
+    pub foods: u8,
 }
 
 impl Game {
-    pub fn new(name: String, size: Size) -> Self {
+    pub fn new(config: Config) -> Self {
+        let mut inner = Inner {
+            grid: vec![vec![Cell::Empty; config.size.width]; config.size.height],
+            players: HashMap::new(),
+            perks: HashMap::new(),
+        };
+        for _ in 0..(config.foods as usize) {
+            inner.spawn_food(config.size);
+        }
+
         Self {
-            name,
-            size,
-            inner: Arc::new(Mutex::new(Inner {
-                grid: vec![vec![Cell::Empty; size.width]; size.height],
-                players: HashMap::new(),
-                perks: HashMap::new(),
-            })),
+            name: config.name,
+            size: config.size,
+            inner: Arc::new(Mutex::new(inner)),
         }
     }
 
     pub async fn run(&self) {
-        let mut inner = self.inner.lock().await;
-        for _ in 0..5 {
-            self.spawn_food(&mut inner).await;
-        }
-        drop(inner);
-
         loop {
             let mut inner = self.inner.lock().await;
             if !inner.players.is_empty() {
@@ -59,7 +58,7 @@ impl Game {
     pub async fn play(&self, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
 
-        let head = self.safe_place(&inner.grid);
+        let head = inner.safe_place(self.size);
         let (tx, rx) = socket.split();
         let mut player = Player::new(head, tx);
         let _ = player.send(Packet::GridSize(self.size).message().await).await;
@@ -100,21 +99,11 @@ impl Game {
 
             let data = message.as_bytes();
             match data[0] {
-                0 => break,
-                1 => player.lock().await.process(&data[1..]).await,
+                0 => player.lock().await.process(&data[1..]).await,
                 _ => (),
             }
         };
         // Player left the game from here.
-    }
-
-    fn safe_place(&self, grid: &[Vec<Cell>]) -> Coord {
-        loop {
-            let coord = Coord::random(self.size);
-            if matches!(grid[coord.y][coord.x], Cell::Empty) {
-                return coord;
-            }
-        }
     }
 
     async fn walk_snakes(&self, inner: &mut Inner) {
@@ -145,7 +134,7 @@ impl Game {
                     let mut player = player.lock().await;
                     player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
 
-                    let head = self.safe_place(&inner.grid);
+                    let head = inner.safe_place(self.size);
                     player.respawn(head).await;
                     inner.grid[head.y][head.x] = Cell::Occupied;
                     payload.push(SnakeChange::Die(id, head));
@@ -157,19 +146,12 @@ impl Game {
                     *target = Cell::Occupied;
                     payload.push(SnakeChange::Add(id, new));
 
-                    self.spawn_food(inner).await;
+                    let new_food = inner.spawn_food(self.size);
+                    Game::broadcast_message(inner, Packet::Perk(new_food).message().await).await;
                 },
             }
         }
         Game::broadcast_message(inner, Packet::SnakeChanges(payload).message().await).await;
-    }
-
-    async fn spawn_food(&self, inner: &mut Inner) {
-        let coord = self.safe_place(&inner.grid);
-        let food: Arc<Box<dyn Perk + Send + Sync>> = Arc::new(Box::new(Food));
-        inner.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&food));
-        inner.perks.insert(coord, food);
-        Game::broadcast_message(inner, Packet::Perk(coord).message().await).await;
     }
 
     async fn broadcast_message(inner: &Inner, message: Message) {
@@ -188,5 +170,30 @@ impl Game {
 
     pub async fn player_count(&self) -> usize {
         self.inner.lock().await.players.len()
+    }
+}
+
+struct Inner {
+    grid: Vec<Vec<Cell>>,
+    players: HashMap<u16, Arc<Mutex<Player>>>,
+    perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+}
+
+impl Inner {
+    fn safe_place(&self, size: Size) -> Coord {
+        loop {
+            let coord = Coord::random(size);
+            if matches!(self.grid[coord.y][coord.x], Cell::Empty) {
+                return coord;
+            }
+        }
+    }
+
+    fn spawn_food(&mut self, size: Size) -> Coord {
+        let coord = self.safe_place(size);
+        let food: Arc<Box<dyn Perk + Send + Sync>> = Arc::new(Box::new(Food));
+        self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&food));
+        self.perks.insert(coord, food);
+        coord
     }
 }

@@ -1,7 +1,6 @@
 use warp::Filter;
 use std::sync::Arc;
 use warp::ws::WebSocket;
-use std::convert::TryInto;
 use crate::lobby::Lobby;
 
 mod game;
@@ -17,11 +16,6 @@ mod lobby;
 #[tokio::main]
 async fn main() {
     env_logger::init();
-
-    let [_width, _height]: [usize; 2] = std::env::args().skip(1)
-        .map(|s| s.parse::<usize>().unwrap())
-        .collect::<Vec<_>>()
-        .try_into().unwrap();
 
     let lobby = Arc::new(Lobby::new());
     let lobby_ref = warp::any().map(move || Arc::clone(&lobby));

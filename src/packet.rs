@@ -12,6 +12,7 @@ use std::io::Write;
 pub enum Packet<'a> {
     Games(&'a HashMap<u16, Arc<Game>>),
     GamePlayerCount(u16, u8),
+    GameCreated(u16),
     GridSize(Size),
     Snakes(&'a HashMap<u16, Arc<Mutex<Player>>>),
     Perk(Coord),
@@ -26,6 +27,7 @@ impl<'a> Packet<'a> {
         match self {
             Games(_) => 0,
             GamePlayerCount(_, _) => 1,
+            GameCreated(_) => 2,
             GridSize(_) => 0,
             Snakes(_) => 1,
             Perk(_) => 2,
@@ -53,6 +55,9 @@ impl<'a> Packet<'a> {
                 payload.write_u16::<BE>(id).unwrap();
                 payload.write_u8(count).unwrap();
             },
+            GameCreated(id) => {
+                payload.write_u16::<BE>(id).unwrap();
+            }
             GridSize(size) => {
                 payload.write_u16::<BE>(size.width as u16).unwrap();
                 payload.write_u16::<BE>(size.height as u16).unwrap();

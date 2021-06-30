@@ -11,6 +11,26 @@ class Lobby {
             this.socket.addEventListener('message', (event) => {
                 this.processMessage(new ByteBuffer(event.data));
             });
+
+            document.getElementById('create-join').addEventListener('click', () => {
+                const name = document.getElementById('create-name').value;
+                const width = Number(document.getElementById('create-width').value);
+                const height = Number(document.getElementById('create-height').value);
+                const foods = Number(document.getElementById('create-foods').value);
+
+                const nameData = new ByteBuffer();
+                nameData.implicitGrowth = true;
+                const nameSize = nameData.writeString(name);
+
+                const data = new ByteBuffer(1 + 2 + nameSize + 1 + 1 + 1);
+                data.writeUnsignedByte(0);
+                data.writeUnsignedShort(nameSize);
+                data.write(nameData);
+                data.writeUnsignedByte(width);
+                data.writeUnsignedByte(height);
+                data.writeUnsignedByte(foods);
+                this.socket.send(data.buffer);
+            });
         });
     }
 
@@ -21,6 +41,9 @@ class Lobby {
                 break;
             case 1:
                 this.updatePlayerCount(data);
+                break;
+            case 2:
+                this.joinCreated(data);
                 break;
         }
     }
@@ -42,6 +65,11 @@ class Lobby {
     updatePlayerCount(data) {
         const id = String(data.readUnsignedShort());
         this.games[id].updatePlayerCount(String(data.readUnsignedByte()));
+    }
+
+    joinCreated(data) {
+        const id = data.readUnsignedShort();
+        new Game(id);
     }
 }
 
@@ -141,7 +169,7 @@ class Game {
             default:
                 return;
         }
-        this.socket.send(new Uint8Array([1, key]));
+        this.socket.send(new Uint8Array([0, key]));
     }
 
     create(data) {
