@@ -290,4 +290,12 @@ function baseWebsocketUrl() {
     return `${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}`;
 }
 
+document.querySelectorAll('.validable').forEach((elem) => {
+    function setProcessButtonState() {
+        document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
+    }
+    elem.addEventListener('change', setProcessButtonState);
+    elem.addEventListener('keyup', setProcessButtonState);
+});
+
 new Lobby();

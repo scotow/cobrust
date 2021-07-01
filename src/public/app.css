@@ -117,6 +117,21 @@ body {
     transform: translateY(-1px);
 }
 
+#lobby > .games > .content:empty::before {
+    content: 'Head to the create tab to begin';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 90%;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    opacity: 0.2;
+    color: darkgray;
+    transform: translate(-50%, -50%);
+    text-transform: uppercase;
+}
+
 #lobby > .games > .content > .game {
     display: flex;
     justify-content: center;
@@ -185,6 +200,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     padding: 12px;
+    color: lightgray;
 }
 
 #lobby > .create > .content > .settings > .section {
@@ -195,27 +211,22 @@ body {
     margin-bottom: 6px;
     font-size: 22px;
     font-weight: bold;
-    color: lightgray;
-}
-
-#lobby > .create > .content > .settings > .section > .input {
-    display: inline-block;
-    margin: 0 16px 4px 0;
-    font-size: 24px;
-    font-weight: bold;
-    color: lightgray;
 }
 
 #lobby > .create > .content > .settings > .section > .input > .label {
+    margin-bottom: 2px;
     font-size: 12px;
-    color: lightgray;
 }
 
 #lobby > .create > .content > .settings > .section > .input > .label::after {
     content: ':';
 }
 
-#lobby > .create > .content > .settings > .section input[type=text] {
+#lobby > .create > .content > .settings > .section > .input > input:valid {
+    border-color: green !important;
+}
+
+#lobby > .create > .content > .settings > .section > .input.text > input {
     width: 100%;
     padding: 8px 12px;
     background: #272B30;
@@ -223,6 +234,15 @@ body {
     border: 1px solid black;
     border-radius: 3px;
     font-size: 12px;
+}
+
+#lobby > .create > .content > .settings > .section > .input.number {
+    display: inline-block;
+    margin: 0 16px 4px 0;
+}
+
+#lobby > .create > .content > .settings > .section > .input.number > .label {
+    font-weight: bold;
 }
 
 #lobby > .create > .content > .settings > .section > .input.number > input {
@@ -235,8 +255,17 @@ body {
     font-size: 12px;
 }
 
+#lobby > .create > .content > .settings > .section > .input.checkbox {
+    display: inline-block;
+    margin: 0 16px 4px 0;
+}
+
 #lobby > .create > .content > .settings > .section > .input.checkbox > .label {
     display: inline-block;
+}
+
+#lobby > .create > .content > .settings > .section > .input.checkbox > input {
+    margin-left: 6px;
 }
 
 #lobby > .create > .content > .actions {
@@ -256,6 +285,12 @@ body {
 
 #lobby > .create > .content > .actions > .process:hover {
     opacity: 0.8;
+}
+
+#lobby > .create > .content > .actions > .process.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 #lobby > .rules > .content {
