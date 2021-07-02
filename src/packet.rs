@@ -10,7 +10,7 @@ use crate::game::Game;
 use std::io::Write;
 
 pub enum Packet<'a> {
-    Games(&'a HashMap<u16, Arc<Game>>),
+    Games(Vec<(&'a u16, &'a Arc<Game>)>),
     GamePlayerCount(u16, u8),
     GameCreated(u16),
     GridSize(Size),

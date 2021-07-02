@@ -26,6 +26,15 @@ pub struct Config {
     pub foods: u8,
 }
 
+impl Config {
+    pub fn is_valid(&self) -> bool {
+        (1..=32).contains(&self.name.len()) &&
+            (16..=200).contains(&self.size.width) &&
+            (16..=200).contains(&self.size.height) &&
+            (1..=20).contains(&self.foods)
+    }
+}
+
 impl Game {
     pub fn new(config: Config) -> Self {
         let mut inner = Inner {
