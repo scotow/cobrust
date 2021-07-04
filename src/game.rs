@@ -17,13 +17,15 @@ use futures::stream::SplitStream;
 pub struct Game {
     pub name: String,
     pub size: Size,
+    pub food_strength: u16,
     inner: Arc<Mutex<Inner>>,
 }
 
 pub struct Config {
     pub name: String,
     pub size: Size,
-    pub foods: u8,
+    pub foods: u16,
+    pub food_strength: u16,
 }
 
 impl Config {
@@ -31,24 +33,26 @@ impl Config {
         (1..=32).contains(&self.name.len()) &&
             (16..=255).contains(&self.size.width) &&
             (16..=255).contains(&self.size.height) &&
-            (1..=32).contains(&self.foods)
+            (1..=32).contains(&self.foods) &&
+            (0..=1024).contains(&self.food_strength)
     }
 }
 
 impl Game {
     pub fn new(config: Config) -> Self {
         let mut inner = Inner {
-            grid: vec![vec![Cell::Empty; config.size.width]; config.size.height],
+            grid: vec![vec![Cell::Empty; config.size.width as usize]; config.size.height as usize],
             players: HashMap::new(),
             perks: HashMap::new(),
         };
         for _ in 0..(config.foods as usize) {
-            inner.spawn_food(config.size);
+            inner.spawn_food(config.size, config.food_strength);
         }
 
         Self {
             name: config.name,
             size: config.size,
+            food_strength: config.food_strength,
             inner: Arc::new(Mutex::new(inner)),
         }
     }
@@ -155,7 +159,7 @@ impl Game {
                     *target = Cell::Occupied;
                     payload.push(SnakeChange::Add(id, new));
 
-                    let new_food = inner.spawn_food(self.size);
+                    let new_food = inner.spawn_food(self.size, self.food_strength);
                     Game::broadcast_message(inner, Packet::Perk(new_food).message().await).await;
                 },
             }
@@ -198,9 +202,9 @@ impl Inner {
         }
     }
 
-    fn spawn_food(&mut self, size: Size) -> Coord {
+    fn spawn_food(&mut self, size: Size, strength: u16) -> Coord {
         let coord = self.safe_place(size);
-        let food: Arc<Box<dyn Perk + Send + Sync>> = Arc::new(Box::new(Food));
+        let food: Arc<Box<dyn Perk + Send + Sync>> = Arc::new(Box::new(Food(strength)));
         self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&food));
         self.perks.insert(coord, food);
         coord

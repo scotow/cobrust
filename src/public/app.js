@@ -16,18 +16,20 @@ class Lobby {
                 const width = Number(document.getElementById('create-width').value);
                 const height = Number(document.getElementById('create-height').value);
                 const foods = Number(document.getElementById('create-foods').value);
+                const food_strength = Number(document.getElementById('create-food-strength').value);
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 1 + 1 + 1);
+                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 2 + 2);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
-                data.writeUnsignedByte(width);
-                data.writeUnsignedByte(height);
-                data.writeUnsignedByte(foods);
+                data.writeUnsignedShort(width);
+                data.writeUnsignedShort(height);
+                data.writeUnsignedShort(foods);
+                data.writeUnsignedShort(food_strength);
                 this.socket.send(data.buffer);
             });
         });
@@ -185,7 +187,6 @@ class Game {
         this.context = this.canvas.getContext('2d');
         this.emptyCanvas();
         document.getElementById('game').append(this.canvas);
-        console.log(this.cellSize, this.cellSpacing);
     }
 
     emptyCanvas() {

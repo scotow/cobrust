@@ -9,6 +9,8 @@ use crate::size::Size;
 use tokio::task;
 use futures::future::join_all;
 use crate::packet::Packet;
+use std::io::{Cursor, Read};
+use byteorder::{ReadBytesExt, BE};
 
 pub struct Lobby {
     games: Mutex<HashMap<u16, Arc<Game>>>,
@@ -58,15 +60,20 @@ impl Lobby {
     }
 
     pub async fn create(&self, data: &[u8]) -> Option<(u16, Arc<Game>)> {
-        let size_name = u16::from_be_bytes([data[0], data[1]]) as usize;
-        let name = String::from_utf8(data[2..(2 + size_name)].to_vec()).unwrap();
-        let size = Size {
-            width: data[2 + size_name] as usize,
-            height: data[2 + size_name + 1] as usize,
-        };
-        let foods = data[2 + size_name + 1 + 1];
+        let mut data = Cursor::new(data);
+        let name_size = data.read_u16::<BE>().unwrap();
+        let mut name = vec![0; name_size as usize];
+        data.read_exact(&mut name).unwrap();
+        let name = String::from_utf8(name).unwrap();
 
-        let config = Config { name, size, foods };
+        let size = Size {
+            width: data.read_u16::<BE>().unwrap(),
+            height: data.read_u16::<BE>().unwrap(),
+        };
+        let foods = data.read_u16::<BE>().unwrap();
+        let food_strength = data.read_u16::<BE>().unwrap();
+
+        let config = Config { name, size, foods, food_strength };
         if !config.is_valid() {
             return None;
         }

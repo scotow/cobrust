@@ -204,22 +204,18 @@ body {
 }
 
 #lobby > .create > .content > .settings > .section {
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 #lobby > .create > .content > .settings > .section > .title {
-    margin-bottom: 6px;
-    font-size: 22px;
+    margin-bottom: 8px;
+    font-size: 20px;
     font-weight: bold;
 }
 
 #lobby > .create > .content > .settings > .section > .input > .label {
     margin-bottom: 2px;
     font-size: 12px;
-}
-
-#lobby > .create > .content > .settings > .section > .input > .label::after {
-    content: ':';
 }
 
 #lobby > .create > .content > .settings > .section > .input > input:valid {
@@ -257,7 +253,7 @@ body {
 
 #lobby > .create > .content > .settings > .section > .input.checkbox {
     display: inline-block;
-    margin: 0 16px 4px 0;
+    margin: 0 20px 4px 0;
 }
 
 #lobby > .create > .content > .settings > .section > .input.checkbox > .label {
@@ -265,7 +261,7 @@ body {
 }
 
 #lobby > .create > .content > .settings > .section > .input.checkbox > input {
-    margin-left: 6px;
+    margin-right: 6px;
 }
 
 #lobby > .create > .content > .actions {

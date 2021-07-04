@@ -1,4 +1,4 @@
-use std::ops::{Add, Rem};
+use std::ops::Add;
 use crate::direction::Dir;
 use crate::size::Size;
 use rand::Rng;
@@ -13,8 +13,8 @@ impl Coord {
     pub fn random(size: Size) -> Self {
         let mut rng = rand::thread_rng();
         Self {
-            x: rng.gen_range(0..size.width),
-            y: rng.gen_range(0..size.height),
+            x: rng.gen_range(0..size.width as usize),
+            y: rng.gen_range(0..size.height as usize),
         }
     }
 }
@@ -41,17 +41,6 @@ impl Add<(Dir, Size)> for Coord {
                 x: (self.x as isize + 1).rem_euclid(rhs.1.width as isize) as usize,
                 y: self.y
             },
-        }
-    }
-}
-
-impl Rem<Size> for Coord {
-    type Output = Self;
-
-    fn rem(self, rhs: Size) -> Self::Output {
-        Coord {
-            x: self.x.rem_euclid(rhs.width),
-            y: self.y.rem_euclid(rhs.height),
         }
     }
 }
