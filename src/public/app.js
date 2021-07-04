@@ -15,6 +15,7 @@ class Lobby {
                 const name = document.getElementById('create-name').value;
                 const width = Number(document.getElementById('create-width').value);
                 const height = Number(document.getElementById('create-height').value);
+                const speed = Number(document.getElementById('create-speed').value);
                 const foods = Number(document.getElementById('create-foods').value);
                 const food_strength = Number(document.getElementById('create-food-strength').value);
 
@@ -22,12 +23,13 @@ class Lobby {
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 2 + 2);
+                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
                 data.writeUnsignedShort(width);
                 data.writeUnsignedShort(height);
+                data.writeUnsignedByte(speed);
                 data.writeUnsignedShort(foods);
                 data.writeUnsignedShort(food_strength);
                 this.socket.send(data.buffer);
@@ -58,8 +60,9 @@ class Lobby {
                 width: data.readUnsignedShort(),
                 height: data.readUnsignedShort(),
             };
+            const speed = data.readUnsignedByte();
             const playerCount = data.readUnsignedByte();
-            this.games[String(id)] = new LobbyGame(id, { name, size, playerCount });
+            this.games[String(id)] = new LobbyGame(id, { name, size, speed, playerCount });
         }
     }
 
@@ -87,11 +90,15 @@ class LobbyGame {
         separator.classList.add('separator');
 
         const size = document.createElement('div');
-        size.classList.add('size');
+        size.classList.add('size', 'icon');
         size.innerText = `${info.size.width}x${info.size.height}`;
+
+        const speed = document.createElement('div');
+        speed.classList.add('speed', 'icon');
+        speed.innerText = String(info.speed);
         
         this.players = document.createElement('div');
-        this.players.classList.add('players');
+        this.players.classList.add('players', 'icon');
         this.players.innerText = String(info.playerCount);
 
         const join = document.createElement('div');
@@ -100,7 +107,7 @@ class LobbyGame {
             new Game(id);
         });
 
-        this.game.append(name, size, separator.cloneNode(), this.players, separator.cloneNode(), join);
+        this.game.append(name, size, separator.cloneNode(), speed, separator.cloneNode(), this.players, separator.cloneNode(), join);
         document.querySelector('#lobby > .games > .content').append(this.game);
     }
 

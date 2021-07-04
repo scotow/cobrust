@@ -65,6 +65,7 @@ impl<'a> Packet<'a> {
                     packet![packet; id,
                         game.name.as_bytes().len() as u8, game.name.as_bytes(),
                         game.size.width as u16, game.size.height as u16,
+                        game.speed,
                         game.player_count().await as u8
                     ];
                 }

@@ -70,10 +70,11 @@ impl Lobby {
             width: data.read_u16::<BE>().unwrap(),
             height: data.read_u16::<BE>().unwrap(),
         };
+        let speed = data.read_u8().unwrap();
         let foods = data.read_u16::<BE>().unwrap();
         let food_strength = data.read_u16::<BE>().unwrap();
 
-        let config = Config { name, size, foods, food_strength };
+        let config = Config { name, size, speed, foods, food_strength };
         if !config.is_valid() {
             return None;
         }

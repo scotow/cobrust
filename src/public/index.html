@@ -19,13 +19,13 @@
             <div class="content">
                 <div class="settings">
                     <div class="section">
-                        <div class="title">Game's name</div>
+                        <div class="title">Name</div>
                         <div class="input text">
                             <input id="create-name" class="validable" type="text" maxlength="32" placeholder="32 characters maximum" autocomplete="off" spellcheck="false" pattern="\S(.{0,30}\S)?" required>
                         </div>
                     </div>
                     <div class="section">
-                        <div class="title">Grid's size</div>
+                        <div class="title">Grid</div>
                         <div class="input number">
                             <div class="label">Width</div>
                             <input id="create-width" class="validable" type="number" min="16" max="255" value="60" placeholder="16 - 255" required>
@@ -33,6 +33,10 @@
                         <div class="input number">
                             <div class="label">Height</div>
                             <input id="create-height" class="validable" type="number" min="16" max="255" value="33" placeholder="16 - 255" required>
+                        </div>
+                        <div class="input number">
+                            <div class="label">Speed</div>
+                            <input id="create-speed" class="validable" type="number" min="1" max="50" value="20" placeholder="1 - 50" required>
                         </div>
                     </div>
                     <div class="section">
@@ -54,7 +58,7 @@
                         </div>
                         <div class="input checkbox">
                             <input type="checkbox" disabled>
-                            <div class="label">Reverse</div>
+                            <div class="label">Reverser</div>
                         </div>
                         <div class="input checkbox">
                             <input type="checkbox" disabled>

@@ -17,6 +17,7 @@ use futures::stream::SplitStream;
 pub struct Game {
     pub name: String,
     pub size: Size,
+    pub speed: u8,
     pub food_strength: u16,
     inner: Arc<Mutex<Inner>>,
 }
@@ -24,6 +25,7 @@ pub struct Game {
 pub struct Config {
     pub name: String,
     pub size: Size,
+    pub speed: u8,
     pub foods: u16,
     pub food_strength: u16,
 }
@@ -33,6 +35,7 @@ impl Config {
         (1..=32).contains(&self.name.len()) &&
             (16..=255).contains(&self.size.width) &&
             (16..=255).contains(&self.size.height) &&
+            (1..=50).contains(&self.speed) &&
             (1..=32).contains(&self.foods) &&
             (0..=1024).contains(&self.food_strength)
     }
@@ -52,6 +55,7 @@ impl Game {
         Self {
             name: config.name,
             size: config.size,
+            speed: config.speed,
             food_strength: config.food_strength,
             inner: Arc::new(Mutex::new(inner)),
         }
@@ -64,7 +68,7 @@ impl Game {
                 self.walk_snakes(&mut inner).await;
             }
             drop(inner);
-            sleep(Duration::from_millis(50)).await;
+            sleep(Duration::from_millis(1000 / self.speed as u64)).await;
         }
     }
 
