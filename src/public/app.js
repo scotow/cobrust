@@ -1,5 +1,4 @@
 const BORDER_WIDTH = 5;
-const CELL_SIZE = 50;
 
 class Lobby {
     constructor() {
@@ -178,18 +177,21 @@ class Game {
             height: data.readUnsignedShort(),
         };
         this.players = {};
+        this.cellSize = Math.max(window.innerWidth * 0.9 / this.size.width | 0, window.innerHeight * 0.9 / this.size.height | 0);
+        this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
         this.canvas = document.createElement('canvas');
-        this.canvas.width = this.size.width * CELL_SIZE + 2 * BORDER_WIDTH;
-        this.canvas.height = this.size.height * CELL_SIZE + 2 * BORDER_WIDTH;
+        this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
+        this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
         this.context = this.canvas.getContext('2d');
         this.emptyCanvas();
         document.getElementById('game').append(this.canvas);
+        console.log(this.cellSize, this.cellSpacing);
     }
 
     emptyCanvas() {
         this.context.strokeStyle = 'white';
         this.context.lineWidth = BORDER_WIDTH;
-        this.context.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+        this.context.strokeRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
         this.clearMode();
         this.context.fillRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
@@ -274,14 +276,14 @@ class Game {
 
     drawCell(coords) {
         for (const { x, y } of coords instanceof Array ? coords : [coords]) {
-            this.context.fillRect(BORDER_WIDTH + x * CELL_SIZE + 2, BORDER_WIDTH + y * CELL_SIZE + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            this.context.fillRect(BORDER_WIDTH + x * this.cellSize + this.cellSpacing, BORDER_WIDTH + y * this.cellSize + this.cellSpacing, this.cellSize - this.cellSpacing * 2, this.cellSize - this.cellSpacing * 2);
         }
     }
 
     drawPerk(data) {
         this.context.fillStyle = 'red';
         this.context.beginPath();
-        this.context.arc(BORDER_WIDTH + data.readUnsignedShort() * CELL_SIZE + CELL_SIZE / 2, BORDER_WIDTH + data.readUnsignedShort() * CELL_SIZE + CELL_SIZE / 2, CELL_SIZE / 4, 0, 2 * Math.PI);
+        this.context.arc(BORDER_WIDTH + data.readUnsignedShort() * this.cellSize + this.cellSize / 2, BORDER_WIDTH + data.readUnsignedShort() * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
     }
 }

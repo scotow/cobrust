@@ -29,9 +29,9 @@ pub struct Config {
 impl Config {
     pub fn is_valid(&self) -> bool {
         (1..=32).contains(&self.name.len()) &&
-            (16..=200).contains(&self.size.width) &&
-            (16..=200).contains(&self.size.height) &&
-            (1..=20).contains(&self.foods)
+            (16..=255).contains(&self.size.width) &&
+            (16..=255).contains(&self.size.height) &&
+            (1..=32).contains(&self.foods)
     }
 }
 
