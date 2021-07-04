@@ -78,13 +78,14 @@ impl Game {
         let head = inner.safe_place(self.size);
         let (tx, rx) = socket.split();
         let mut player = Player::new(head, tx);
+        let color = player.color;
         let _ = player.send(Packet::GridSize(self.size).message().await).await;
 
         let id = rand::random();
         let player = Arc::new(Mutex::new(player));
         inner.players.insert(id, Arc::clone(&player));
         inner.grid[head.y][head.x] = Cell::Occupied;
-        Game::broadcast_message(&inner, Packet::PlayerJoined(id, head).message().await).await;
+        Game::broadcast_message(&inner, Packet::PlayerJoined(id, head, color).message().await).await;
 
         {
             let snakes_message = Packet::Snakes(&inner.players).message().await;

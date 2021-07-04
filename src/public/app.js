@@ -205,9 +205,9 @@ class Game {
     }
 
     setPlayers(data) {
-        this.fillMode();
         while (data.available) {
             const id = data.readUnsignedShort();
+            const color = [hslFromShort(data.readUnsignedShort()), hslFromShort(data.readUnsignedShort())];
             const size = data.readUnsignedShort();
             const body = [];
             for (let j = 0; j < size; j++) {
@@ -216,20 +216,26 @@ class Game {
                     y: data.readUnsignedShort(),
                 };
                 body.push(cell);
+                if (j === 0) {
+                    this.fillMode(color[0]);
+                } else if (j === 1) {
+                    this.fillMode(color[1]);
+                }
                 this.drawCell(cell);
             }
-            this.players[id] = body;
+            this.players[id] = { color, body };
         }
     }
 
     addPlayer(data) {
         const id = data.readUnsignedShort();
+        const color = [hslFromShort(data.readUnsignedShort()), hslFromShort(data.readUnsignedShort())];
         const head = {
             x: data.readUnsignedShort(),
             y: data.readUnsignedShort(),
         };
-        this.players[id] = [head];
-        this.fillMode();
+        this.players[id] = { color, body: [head] };
+        this.fillMode(color[0]);
         this.drawCell(head);
     }
 
@@ -245,29 +251,31 @@ class Game {
             switch (data.readUnsignedByte()) {
                 case 0: {
                     this.clearMode();
-                    this.drawCell(this.players[data.readUnsignedShort()].pop());
+                    this.drawCell(this.players[data.readUnsignedShort()].body.pop());
                 } break;
                 case 1: {
-                    const id = data.readUnsignedShort();
+                    const player = this.players[data.readUnsignedShort()];
                     const head = {
                         x: data.readUnsignedShort(),
                         y: data.readUnsignedShort(),
                     };
-                    this.players[id].unshift(head);
-                    this.fillMode();
+                    player.body.unshift(head);
+                    this.fillMode(player.color[1]);
+                    this.drawCell(player.body[1]);
+                    this.fillMode(player.color[0]);
                     this.drawCell(head);
                 } break;
                 case 2: {
-                    const id = data.readUnsignedShort();
+                    const player = this.players[data.readUnsignedShort()];
                     this.clearMode();
-                    this.drawCell(this.players[id]);
+                    this.drawCell(player.body);
     
                     const head = {
                         x: data.readUnsignedShort(),
                         y: data.readUnsignedShort(),
                     };
-                    this.players[id] = [head];
-                    this.fillMode();
+                    player.body = [head];
+                    this.fillMode(player.color[0]);
                     this.drawCell(head);
                 } break;
             }
@@ -275,11 +283,11 @@ class Game {
     }
 
     clearMode() {
-        this.context.fillStyle = 'black';
+        this.context.fillStyle = '#000000';
     }
 
-    fillMode() {
-        this.context.fillStyle = 'white';
+    fillMode(color) {
+        this.context.fillStyle = color;
     }
 
     drawCell(coords) {
@@ -289,7 +297,7 @@ class Game {
     }
 
     drawPerk(data) {
-        this.context.fillStyle = 'red';
+        this.context.fillStyle = 'lime';
         this.context.beginPath();
         this.context.arc(BORDER_WIDTH + data.readUnsignedShort() * this.cellSize + this.cellSize / 2, BORDER_WIDTH + data.readUnsignedShort() * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
@@ -300,12 +308,20 @@ function baseWebsocketUrl() {
     return `${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}`;
 }
 
+function hslFromShort(color) {
+    return `hsl(${color}, 100%, 50%)`;
+}
+
 document.querySelectorAll('.validable').forEach((elem) => {
     function setProcessButtonState() {
         document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
     }
     elem.addEventListener('change', setProcessButtonState);
     elem.addEventListener('keyup', setProcessButtonState);
+});
+
+document.getElementById('tab-create').addEventListener('change', () => {
+    document.getElementById('create-name').focus();
 });
 
 new Lobby();

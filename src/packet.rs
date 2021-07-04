@@ -33,28 +33,12 @@ pub enum Packet<'a> {
     GridSize(Size),
     Snakes(&'a HashMap<u16, Arc<Mutex<Player>>>),
     Perk(Coord),
-    PlayerJoined(u16, Coord),
+    PlayerJoined(u16, Coord, (u16, u16)),
     PlayerLeft(u16),
     SnakeChanges(Vec<SnakeChange>),
 }
 
 impl<'a> Packet<'a> {
-    #[allow(dead_code)]
-    fn id(&self) -> u8 {
-        use Packet::*;
-        match self {
-            Games(_) => 0,
-            GamePlayerCount(_, _) => 1,
-            GameCreated(_) => 2,
-            GridSize(_) => 0,
-            Snakes(_) => 1,
-            Perk(_) => 2,
-            PlayerJoined(_, _) => 3,
-            PlayerLeft(_) => 4,
-            SnakeChanges(_) => 5,
-        }
-    }
-
     pub async fn message(self) -> Message {
         use Packet::*;
         let payload = match self {
@@ -84,9 +68,9 @@ impl<'a> Packet<'a> {
                 let mut packet = Vec::with_capacity(128);
                 packet.push(1);
                 for (&id, player) in players {
-                    let body = &player.lock().await.body;
-                    packet![packet; id, body.len() as u16];
-                    for &coord in body {
+                    let player = player.lock().await;
+                    packet![packet; id, player.color.0, player.color.1, player.body.len() as u16];
+                    for coord in &player.body {
                         packet![packet; coord.x as u16, coord.y as u16];
                     }
                 }
@@ -95,8 +79,8 @@ impl<'a> Packet<'a> {
             Perk(coord) => {
                 packet![2u8, coord.x as u16, coord.y as u16]
             }
-            PlayerJoined(id, head) => {
-                packet![3u8, id, head.x as u16, head.y as u16]
+            PlayerJoined(id, head, color) => {
+                packet![3u8, id, color.0, color.1, head.x as u16, head.y as u16]
             },
             PlayerLeft(id) => {
                 packet![4u8, id]

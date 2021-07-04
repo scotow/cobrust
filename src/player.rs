@@ -7,6 +7,7 @@ use warp::ws::{Message, WebSocket};
 use futures::SinkExt;
 use std::convert::TryFrom;
 use crate::size::Size;
+use rand::Rng;
 
 const START_SIZE: u16 = 9;
 
@@ -15,6 +16,7 @@ pub struct Player {
     pub body: VecDeque<Coord>,
     direction: Mutex<Direction>,
     growth: u16,
+    pub color: (u16, u16),
     sink: SplitSink<WebSocket, Message>,
 }
 
@@ -26,10 +28,12 @@ struct Direction {
 
 impl Player {
     pub fn new(head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
+        let mut rng = rand::thread_rng();
         Self {
             body: VecDeque::from(vec![head]),
             direction: Mutex::new(Direction::default()),
             growth: START_SIZE,
+            color: (rng.gen_range(0..360), rng.gen_range(0..360)),
             sink: tx,
         }
     }
