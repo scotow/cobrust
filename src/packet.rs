@@ -1,13 +1,30 @@
 use crate::size::Size;
 use crate::player::Player;
 use warp::ws::Message;
-use byteorder::{WriteBytesExt, BE};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::coordinate::Coord;
 use crate::game::Game;
-use std::io::Write;
+
+macro_rules! packet {
+    [$($elem:expr),*] => {
+        {
+            let mut packet = Vec::with_capacity(32);
+            $(
+                $elem.push(&mut packet);
+            )*
+            packet
+        }
+    };
+    [$vec:expr; $($elem:expr),*] => {
+        {
+            $(
+                $elem.push(&mut $vec);
+            )*
+        }
+    };
+}
 
 pub enum Packet<'a> {
     Games(Vec<(&'a u16, &'a Arc<Game>)>),
@@ -22,6 +39,7 @@ pub enum Packet<'a> {
 }
 
 impl<'a> Packet<'a> {
+    #[allow(dead_code)]
     fn id(&self) -> u8 {
         use Packet::*;
         match self {
@@ -39,70 +57,60 @@ impl<'a> Packet<'a> {
 
     pub async fn message(self) -> Message {
         use Packet::*;
-        let mut payload = vec![self.id()];
-        match self {
+        let payload = match self {
             Games(games) => {
+                let mut packet = Vec::with_capacity(128);
+                packet.push(0);
                 for (&id, game) in games {
-                    payload.write_u16::<BE>(id).unwrap();
-                    payload.write_u8(game.name.as_bytes().len() as u8).unwrap();
-                    payload.write_all(game.name.as_bytes()).unwrap();
-                    payload.write_u16::<BE>(game.size.width as u16).unwrap();
-                    payload.write_u16::<BE>(game.size.height as u16).unwrap();
-                    payload.write_u8(game.player_count().await as u8).unwrap();
+                    packet![packet; id,
+                        game.name.as_bytes().len() as u8, game.name.as_bytes(),
+                        game.size.width as u16, game.size.height as u16,
+                        game.player_count().await as u8
+                    ];
                 }
+                packet
             }
             GamePlayerCount(id, count) => {
-                payload.write_u16::<BE>(id).unwrap();
-                payload.write_u8(count).unwrap();
+                packet![1u8, id, count]
             },
             GameCreated(id) => {
-                payload.write_u16::<BE>(id).unwrap();
+                packet![2u8, id]
             }
             GridSize(size) => {
-                payload.write_u16::<BE>(size.width as u16).unwrap();
-                payload.write_u16::<BE>(size.height as u16).unwrap();
+                packet![0u8, size.width as u16, size.height as u16]
             }
             Snakes(players) => {
+                let mut packet = Vec::with_capacity(128);
+                packet.push(1);
                 for (&id, player) in players {
-                    payload.write_u16::<BE>(id).unwrap();
                     let body = &player.lock().await.body;
-                    payload.write_u16::<BE>(body.len() as u16).unwrap();
+                    packet![packet; id, body.len() as u16];
                     for &coord in body {
-                        payload.write_u16::<BE>(coord.x as u16).unwrap();
-                        payload.write_u16::<BE>(coord.y as u16).unwrap();
+                        packet![packet; coord.x as u16, coord.y as u16];
                     }
                 }
+                packet
             },
             Perk(coord) => {
-                payload.write_u16::<BE>(coord.x as u16).unwrap();
-                payload.write_u16::<BE>(coord.y as u16).unwrap();
+                packet![2u8, coord.x as u16, coord.y as u16]
             }
             PlayerJoined(id, head) => {
-                payload.write_u16::<BE>(id).unwrap();
-                payload.write_u16::<BE>(head.x as u16).unwrap();
-                payload.write_u16::<BE>(head.y as u16).unwrap();
+                packet![3u8, id, head.x as u16, head.y as u16]
             },
             PlayerLeft(id) => {
-                payload.write_u16::<BE>(id).unwrap();
+                packet![4u8, id]
             }
             SnakeChanges(changes) => {
                 use SnakeChange::*;
+                let mut packet = packet![5u8];
                 for change in changes {
-                    payload.write_u8(change.id()).unwrap();
                     match change {
-                        Remove(id) => payload.write_u16::<BE>(id).unwrap(),
-                        Add(id, coord) => {
-                            payload.write_u16::<BE>(id).unwrap();
-                            payload.write_u16::<BE>(coord.x as u16).unwrap();
-                            payload.write_u16::<BE>(coord.y as u16).unwrap();
-                        },
-                        Die(id, coord) => {
-                            payload.write_u16::<BE>(id).unwrap();
-                            payload.write_u16::<BE>(coord.x as u16).unwrap();
-                            payload.write_u16::<BE>(coord.y as u16).unwrap();
-                        },
+                        Remove(id) => packet![packet; 0u8, id],
+                        Add(id, coord) => packet![packet; 1u8, id, coord.x as u16, coord.y as u16],
+                        Die(id, coord) => packet![packet; 2u8, id, coord.x as u16, coord.y as u16],
                     }
                 }
+                packet
             },
         };
         Message::binary(payload)
@@ -116,6 +124,7 @@ pub enum SnakeChange {
 }
 
 impl SnakeChange {
+    #[allow(dead_code)]
     fn id(&self) -> u8 {
         use SnakeChange::*;
         match self {
@@ -124,4 +133,17 @@ impl SnakeChange {
             Die(_, _) => 2,
         }
     }
+}
+
+trait ToData {
+    fn push(&self, out: &mut Vec<u8>);
+}
+impl ToData for u8 {
+    fn push(&self, out: &mut Vec<u8>) { out.push(*self) }
+}
+impl ToData for u16 {
+    fn push(&self, out: &mut Vec<u8>) { out.extend_from_slice(&self.to_be_bytes()) }
+}
+impl ToData for [u8] {
+    fn push(&self, out: &mut Vec<u8>) { out.extend_from_slice(self) }
 }
