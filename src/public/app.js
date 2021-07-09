@@ -141,7 +141,7 @@ class Game {
                 this.setPlayers(data);
                 break;
             case 2:
-                this.drawPerk(data);
+                this.addPerk(data);
                 break;
             case 3:
                 this.addPlayer(data);
@@ -186,20 +186,57 @@ class Game {
             height: data.readUnsignedShort(),
         };
         this.players = {};
-        this.cellSize = Math.max(window.innerWidth * 0.9 / this.size.width | 0, window.innerHeight * 0.9 / this.size.height | 0);
-        this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
+        this.perks = {};
+
         this.canvas = document.createElement('canvas');
-        this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
-        this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
         this.context = this.canvas.getContext('2d');
-        this.emptyCanvas();
+        this.resizeHandler = () => {
+            this.cellSize = Math.max(window.innerWidth / this.size.width | 0, window.innerHeight / this.size.height | 0);
+            this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
+            this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
+            this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
+
+            const scale = Math.min(window.innerWidth * 0.9 / this.canvas.width, window.innerHeight * 0.9 / this.canvas.height);
+            this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
+            this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
+            this.redrawCanvas();
+        };
+        this.resizeHandler();
+        window.addEventListener('resize', this.resizeHandler);
+
+        const title = document.createElement('div');
+        title.classList.add('title');
+        title.innerText = 'Jean-Kevin\'s Game';
         document.getElementById('game').append(this.canvas);
+        document.body.classList.replace('lobbying', 'playing');
     }
 
-    emptyCanvas() {
+    redrawCanvas() {
+        this.drawBorders();
+        this.emptyCanvas();
+
+        for (const id in this.players) {
+            const player = this.players[id];
+            this.fillMode(player.color[0]);
+            for (let i = 0; i < player.body.length; i++) {
+                if (i === 1) {
+                    this.fillMode(player.color[1]);
+                }
+                this.drawCell(player.body[i]);
+            }
+        }
+        for (const id in this.perks) {
+            this.drawPerk(this.perks[id]);
+        }
+    }
+
+    drawBorders() {
         this.context.strokeStyle = 'white';
         this.context.lineWidth = BORDER_WIDTH;
         this.context.strokeRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
+    }
+
+    emptyCanvas() { 
         this.clearMode();
         this.context.fillRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
@@ -210,15 +247,14 @@ class Game {
             const color = [hslFromShort(data.readUnsignedShort()), hslFromShort(data.readUnsignedShort())];
             const size = data.readUnsignedShort();
             const body = [];
-            for (let j = 0; j < size; j++) {
+            this.fillMode(color[0]);
+            for (let i = 0; i < size; i++) {
                 const cell = {
                     x: data.readUnsignedShort(), 
                     y: data.readUnsignedShort(),
                 };
                 body.push(cell);
-                if (j === 0) {
-                    this.fillMode(color[0]);
-                } else if (j === 1) {
+                if (i === 1) {
                     this.fillMode(color[1]);
                 }
                 this.drawCell(cell);
@@ -260,6 +296,8 @@ class Game {
                         y: data.readUnsignedShort(),
                     };
                     player.body.unshift(head);
+                    delete this.perks[`${head.x},${head.y}`];
+
                     this.fillMode(player.color[1]);
                     this.drawCell(player.body[1]);
                     this.fillMode(player.color[0]);
@@ -282,6 +320,15 @@ class Game {
         }
     }
 
+    addPerk(data) {
+        const coord = {
+            x: data.readUnsignedShort(),
+            y: data.readUnsignedShort(),
+        };
+        this.perks[`${coord.x},${coord.y}`] = coord;
+        this.drawPerk(coord);
+    }
+
     clearMode() {
         this.context.fillStyle = '#000000';
     }
@@ -296,10 +343,10 @@ class Game {
         }
     }
 
-    drawPerk(data) {
+    drawPerk(coord) {
         this.context.fillStyle = 'lime';
         this.context.beginPath();
-        this.context.arc(BORDER_WIDTH + data.readUnsignedShort() * this.cellSize + this.cellSize / 2, BORDER_WIDTH + data.readUnsignedShort() * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
+        this.context.arc(BORDER_WIDTH + coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
     }
 }

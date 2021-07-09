@@ -16,7 +16,16 @@ body {
     margin: 0;
 }
 
+body.lobbying > #lobby {
+    display: block;
+}
+
+body.playing > #game {
+    display: block;
+}
+
 #lobby {
+    display: none;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -274,7 +283,7 @@ body {
 }
 
 #lobby > .create > .content > .actions > .process:hover {
-    opacity: 0.8;
+    opacity: 0.95;
 }
 
 #lobby > .create > .content > .actions > .process.disabled {
@@ -287,12 +296,16 @@ body {
     font-size: 22px;
 }
 
-#game > canvas {
+#game {
+    display: none;
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 90%;
-    height: 90%;
-    object-fit: contain;
     transform: translate(-50%, -50%);
+}
+
+#game > .title {
+    margin-bottom: 8px;
+    font-size: 24px;
+    text-align: center;
 }
