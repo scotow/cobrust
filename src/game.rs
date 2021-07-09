@@ -79,7 +79,7 @@ impl Game {
         let (tx, rx) = socket.split();
         let mut player = Player::new(head, tx);
         let color = player.color;
-        let _ = player.send(Packet::GridSize(self.size).message().await).await;
+        let _ = player.send(Packet::GameInfo(self.size, &self.name).message().await).await;
 
         let id = rand::random();
         let player = Arc::new(Mutex::new(player));

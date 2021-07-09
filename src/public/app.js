@@ -204,10 +204,12 @@ class Game {
         this.resizeHandler();
         window.addEventListener('resize', this.resizeHandler);
 
+        const nameLength = data.readUnsignedByte();
+        const name = data.readString(nameLength);
         const title = document.createElement('div');
         title.classList.add('title');
-        title.innerText = 'Jean-Kevin\'s Game';
-        document.getElementById('game').append(this.canvas);
+        title.innerText = name;
+        document.getElementById('game').append(title, this.canvas);
         document.body.classList.replace('lobbying', 'playing');
     }
 

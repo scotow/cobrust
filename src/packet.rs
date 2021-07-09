@@ -30,7 +30,7 @@ pub enum Packet<'a> {
     Games(Vec<(&'a u16, &'a Arc<Game>)>),
     GamePlayerCount(u16, u8),
     GameCreated(u16),
-    GridSize(Size),
+    GameInfo(Size, &'a str),
     Snakes(&'a HashMap<u16, Arc<Mutex<Player>>>),
     Perk(Coord),
     PlayerJoined(u16, Coord, (u16, u16)),
@@ -61,8 +61,8 @@ impl<'a> Packet<'a> {
             GameCreated(id) => {
                 packet![2u8, id]
             }
-            GridSize(size) => {
-                packet![0u8, size.width as u16, size.height as u16]
+            GameInfo(size, name) => {
+                packet![0u8, size.width as u16, size.height as u16, name.as_bytes().len() as u8, name.as_bytes()]
             }
             Snakes(players) => {
                 let mut packet = Vec::with_capacity(128);
