@@ -39,7 +39,7 @@ impl Player {
     }
 
     pub async fn send(&mut self, message: Message) {
-        self.sink.send(message).await.unwrap();
+        let _ = self.sink.send(message).await;
     }
 
     pub async fn process(&self, data: &[u8]) {
