@@ -304,9 +304,34 @@ body.playing > #game {
     transform: translate(-50%, -50%);
 }
 
-#game > .title {
-    margin: 0 0 2px 8px;
+#game > .header {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 8px 2px;
+}
+
+#game > .header > .title {
+    flex: 1;
     font-size: 22px;
     font-weight: bold;
     text-align: left;
+}
+
+#game > .header > .leave {
+    margin-left: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+#game > .header > .leave::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0gMyAwIEMgMS4zNDc2NTYgMCAwIDEuMzQ3NjU2IDAgMyBMIDAgNDcgQyAwIDQ4LjY1MjM0NCAxLjM0NzY1NiA1MCAzIDUwIEwgMzcgNTAgQyAzOC42NTIzNDQgNTAgNDAgNDguNjUyMzQ0IDQwIDQ3IEwgNDAgMzguMTU2MjUgQyAzOS40NTcwMzEgMzguNjI1IDM4Ljc4NTE1NiAzOC45MDYyNSAzOC4wNjI1IDM4LjkwNjI1IEMgMzcuMjYxNzE5IDM4LjkwNjI1IDM2LjUwMzkwNiAzOC41NjY0MDYgMzUuOTM3NSAzOCBDIDM0Ljc2NTYyNSAzNi44MjgxMjUgMzQuNzY1NjI1IDM0Ljk1MzEyNSAzNS45Mzc1IDMzLjc4MTI1IEwgNDAgMjkuNjg3NSBMIDQwIDI4IEwgMTcgMjggQyAxNS4zNDc2NTYgMjggMTQgMjYuNjUyMzQ0IDE0IDI1IEMgMTQgMjMuMzQ3NjU2IDE1LjM0NzY1NiAyMiAxNyAyMiBMIDQwIDIyIEwgNDAgMjAuMzEyNSBMIDM1LjkzNzUgMTYuMjE4NzUgQyAzNS4zNzEwOTQgMTUuNjUyMzQ0IDM1LjA2MjUgMTQuOTI1NzgxIDM1LjA2MjUgMTQuMTI1IEMgMzUuMDYyNSAxMy4zMjQyMTkgMzUuMzcxMDk0IDEyLjU2NjQwNiAzNS45Mzc1IDEyIEMgMzYuNTAzOTA2IDExLjQzMzU5NCAzNy4yNjE3MTkgMTEuMTI1IDM4LjA2MjUgMTEuMTI1IEMgMzguNzg1MTU2IDExLjEyNSAzOS40NTcwMzEgMTEuMzc1IDQwIDExLjg0Mzc1IEwgNDAgMyBDIDQwIDEuMzQ3NjU2IDM4LjY1MjM0NCAwIDM3IDAgWiBNIDM4LjA2MjUgMTMuMTI1IEMgMzcuODA4NTk0IDEzLjEyNSAzNy41MzkwNjMgMTMuMjEwOTM4IDM3LjM0Mzc1IDEzLjQwNjI1IEMgMzYuOTUzMTI1IDEzLjc5Njg3NSAzNi45NTMxMjUgMTQuNDIxODc1IDM3LjM0Mzc1IDE0LjgxMjUgTCA0Ni41MzEyNSAyNCBMIDE3IDI0IEMgMTYuNDQ5MjE5IDI0IDE2IDI0LjQ0OTIxOSAxNiAyNSBDIDE2IDI1LjU1MDc4MSAxNi40NDkyMTkgMjYgMTcgMjYgTCA0Ni41MzEyNSAyNiBMIDM3LjM0Mzc1IDM1LjE4NzUgQyAzNi45NTMxMjUgMzUuNTc4MTI1IDM2Ljk1MzEyNSAzNi4yMDMxMjUgMzcuMzQzNzUgMzYuNTkzNzUgQyAzNy41MzkwNjMgMzYuNzg5MDYzIDM3LjgwNDY4OCAzNi45MDYyNSAzOC4wNjI1IDM2LjkwNjI1IEMgMzguMzIwMzEzIDM2LjkwNjI1IDM4LjU1NDY4OCAzNi43ODkwNjMgMzguNzUgMzYuNTkzNzUgTCA1MC4zNDM3NSAyNSBMIDM4Ljc1IDEzLjQwNjI1IEMgMzguNTU0Njg4IDEzLjIxMDkzOCAzOC4zMTY0MDYgMTMuMTI1IDM4LjA2MjUgMTMuMTI1IFoiPjwvcGF0aD48L3N2Zz4=);
+    vertical-align: middle;
+    transform: translateY(-2px);
 }

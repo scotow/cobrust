@@ -206,10 +206,28 @@ class Game {
 
         const nameLength = data.readUnsignedByte();
         const name = data.readString(nameLength);
+
+        const header = document.createElement('div');
+        header.classList.add('header');
+        
         const title = document.createElement('div');
         title.classList.add('title');
         title.innerText = name;
-        document.getElementById('game').append(title, this.canvas);
+
+        const leave = document.createElement('div');
+        leave.classList.add('leave');
+        leave.innerText = 'Leave';
+        leave.addEventListener('click', () => {
+            this.socket.close();
+            document.body.classList.replace('playing', 'lobbying');
+            const game = document.getElementById('game');
+            while (game.firstChild) {
+                game.removeChild(game.lastChild);
+            }
+        });
+
+        header.append(title, leave);
+        document.getElementById('game').append(header, this.canvas);
         document.body.classList.replace('lobbying', 'playing');
     }
 
@@ -280,7 +298,7 @@ class Game {
     removePlayer(data) {
         const id = data.readUnsignedShort();
         this.clearMode();
-        this.drawCell(this.players[id]);
+        this.drawCell(this.players[id].body);
         delete this.players[id];
     }
 
@@ -346,7 +364,7 @@ class Game {
     }
 
     drawPerk(coord) {
-        this.context.fillStyle = 'lime';
+        this.context.fillStyle = '#FF0000C8';
         this.context.beginPath();
         this.context.arc(BORDER_WIDTH + coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
