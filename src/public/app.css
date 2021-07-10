@@ -12,16 +12,29 @@ html {
 }
 
 body {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     margin: 0;
 }
 
-body.lobbying > #lobby {
+#main {
+    flex: 1;
+    position: relative;
+    height: 100%;
+}
+
+#main.lobbying > #lobby {
     display: block;
 }
 
-body.playing > #game {
+#main.playing > #game {
     display: block;
+}
+
+#title {
+    display: block;
+    margin: 40px auto 20px;
 }
 
 #lobby {

@@ -6,79 +6,82 @@
     <script defer src="byte-buffer.min.js"></script>
     <script defer src="app.js"></script>
 </head>
-<body class="lobbying">
-    <div id="lobby">
-        <section class="tab games">
-            <input id="tab-games" class="input" type="radio" name="tab" checked>
-            <label for="tab-games" class="label">Games</label>
-            <div class="content"></div>
-        </section>
-        <section class="tab create">
-            <input id="tab-create" class="input" type="radio" name="tab">
-            <label for="tab-create" class="label">Create</label>
-            <div class="content">
-                <div class="settings">
-                    <div class="section">
-                        <div class="title">Name</div>
-                        <div class="input text">
-                            <input id="create-name" class="validable" type="text" maxlength="32" placeholder="32 characters maximum" autocomplete="off" spellcheck="false" pattern="\S(.{0,30}\S)?" required>
+<body>
+    <canvas id="title" width="475" height="125"></canvas>
+    <div id="main" class="lobbying">
+        <div id="lobby">
+            <section class="tab games">
+                <input id="tab-games" class="input" type="radio" name="tab" checked>
+                <label for="tab-games" class="label">Games</label>
+                <div class="content"></div>
+            </section>
+            <section class="tab create">
+                <input id="tab-create" class="input" type="radio" name="tab">
+                <label for="tab-create" class="label">Create</label>
+                <div class="content">
+                    <div class="settings">
+                        <div class="section">
+                            <div class="title">Name</div>
+                            <div class="input text">
+                                <input id="create-name" class="validable" type="text" maxlength="32" placeholder="32 characters maximum" autocomplete="off" spellcheck="false" pattern="\S(.{0,30}\S)?" required>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="title">Grid</div>
+                            <div class="input number">
+                                <div class="label">Width</div>
+                                <input id="create-width" class="validable" type="number" min="16" max="255" value="60" placeholder="16 - 255" required>
+                            </div>
+                            <div class="input number">
+                                <div class="label">Height</div>
+                                <input id="create-height" class="validable" type="number" min="16" max="255" value="33" placeholder="16 - 255" required>
+                            </div>
+                            <div class="input number">
+                                <div class="label">Speed</div>
+                                <input id="create-speed" class="validable" type="number" min="1" max="50" value="20" placeholder="1 - 50" required>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="title">Food</div>
+                            <div class="input number">
+                                <div class="label">Count</div>
+                                <input id="create-foods" class="validable" type="number" min="1" max="32" value="1" placeholder="1 - 32" required>
+                            </div>
+                            <div class="input number">
+                                <div class="label">Strength</div>
+                                <input id="create-food-strength" class="validable" type="number" min="0" max="1024" value="4" placeholder="0 - 1024" required>
+                            </div>
+                        </div>
+                        <div class="section">
+                            <div class="title">Perks</div>
+                            <div class="input checkbox">
+                                <input type="checkbox" disabled>
+                                <div class="label">Reserved Food</div>
+                            </div>
+                            <div class="input checkbox">
+                                <input type="checkbox" disabled>
+                                <div class="label">Reverser</div>
+                            </div>
+                            <div class="input checkbox">
+                                <input type="checkbox" disabled>
+                                <div class="label">Teleporter</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="section">
-                        <div class="title">Grid</div>
-                        <div class="input number">
-                            <div class="label">Width</div>
-                            <input id="create-width" class="validable" type="number" min="16" max="255" value="60" placeholder="16 - 255" required>
-                        </div>
-                        <div class="input number">
-                            <div class="label">Height</div>
-                            <input id="create-height" class="validable" type="number" min="16" max="255" value="33" placeholder="16 - 255" required>
-                        </div>
-                        <div class="input number">
-                            <div class="label">Speed</div>
-                            <input id="create-speed" class="validable" type="number" min="1" max="50" value="20" placeholder="1 - 50" required>
-                        </div>
-                    </div>
-                    <div class="section">
-                        <div class="title">Food</div>
-                        <div class="input number">
-                            <div class="label">Count</div>
-                            <input id="create-foods" class="validable" type="number" min="1" max="32" value="1" placeholder="1 - 32" required>
-                        </div>
-                        <div class="input number">
-                            <div class="label">Strength</div>
-                            <input id="create-food-strength" class="validable" type="number" min="0" max="1024" value="4" placeholder="0 - 1024" required>
-                        </div>
-                    </div>
-                    <div class="section">
-                        <div class="title">Perks</div>
-                        <div class="input checkbox">
-                            <input type="checkbox" disabled>
-                            <div class="label">Reserved Food</div>
-                        </div>
-                        <div class="input checkbox">
-                            <input type="checkbox" disabled>
-                            <div class="label">Reverser</div>
-                        </div>
-                        <div class="input checkbox">
-                            <input type="checkbox" disabled>
-                            <div class="label">Teleporter</div>
-                        </div>
+                    <div class="actions">
+                        <div id="create-join" class="process disabled">Create & Join</div>
                     </div>
                 </div>
-                <div class="actions">
-                    <div id="create-join" class="process disabled">Create & Join</div>
+            </section>
+            <section class="tab rules">
+                <input id="tab-rules" class="input" type="radio" name="tab" disabled>
+                <label for="tab-rules" class="label">Rules</label>
+                <div class="content">
+                    Comming soon...
                 </div>
-            </div>
-        </section>
-        <section class="tab rules">
-            <input id="tab-rules" class="input" type="radio" name="tab" disabled>
-            <label for="tab-rules" class="label">Rules</label>
-            <div class="content">
-                Comming soon...
-            </div>
-        </section>
+            </section>
+        </div>
+        <div id="game"></div>
     </div>
-    <div id="game"></div>
 </body>
 </html>

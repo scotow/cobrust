@@ -196,7 +196,8 @@ class Game {
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
 
-            const scale = Math.min(window.innerWidth * 0.9 / this.canvas.width, window.innerHeight * 0.9 / this.canvas.height);
+            const mainSize = document.getElementById('main').getBoundingClientRect();
+            const scale = Math.min(mainSize.width * 0.9 / this.canvas.width, mainSize.height * 0.9 / this.canvas.height);
             this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
             this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
             this.redrawCanvas();
@@ -219,7 +220,7 @@ class Game {
         leave.innerText = 'Leave';
         leave.addEventListener('click', () => {
             this.socket.close();
-            document.body.classList.replace('playing', 'lobbying');
+            document.getElementById('main').classList.replace('playing', 'lobbying');
             const game = document.getElementById('game');
             while (game.firstChild) {
                 game.removeChild(game.lastChild);
@@ -228,7 +229,7 @@ class Game {
 
         header.append(title, leave);
         document.getElementById('game').append(header, this.canvas);
-        document.body.classList.replace('lobbying', 'playing');
+        document.getElementById('main').classList.replace('lobbying', 'playing');
     }
 
     redrawCanvas() {
@@ -364,7 +365,7 @@ class Game {
     }
 
     drawPerk(coord) {
-        this.context.fillStyle = '#FF0000C8';
+        this.context.fillStyle = 'white';
         this.context.beginPath();
         this.context.arc(BORDER_WIDTH + coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
@@ -377,6 +378,47 @@ function baseWebsocketUrl() {
 
 function hslFromShort(color) {
     return `hsl(${color}, 100%, 50%)`;
+}
+
+function animateTitle() {
+    const context = document.getElementById('title').getContext('2d');
+    function fillCell(color, { x, y }) {
+        context.fillStyle = color;
+        context.fillRect(x * 25 + 1, y * 25 + 1, 23, 23);
+    }
+
+    const letters = [
+        {
+            color: 'red',
+            frames: [[{ x: 2, y: 0 }], [{ x: 1, y: 0 }], [{ x: 0, y: 0 }], [{ x: 0, y: 1 }], [{ x: 0, y: 2 }], [{ x: 1, y: 2 }], [{ x: 2, y: 2 }], [{ x: 2, y: 3 }], [{ x: 2, y: 4 }], [{ x: 1, y: 4 }], [{ x: 0, y: 4 }]]
+        },
+        {
+            color: 'green',
+            frames: [[{ x: 4, y: 4 }], [{ x: 4, y: 3 }], [{ x: 4, y: 2 }], [{ x: 4, y: 1 }], [{ x: 4, y: 0 }], [{ x: 5, y: 0 }], [{ x: 6, y: 0 }], [{ x: 6, y: 0 }], [{ x: 6, y: 1 }], [{ x: 6, y: 2 }], [{ x: 6, y: 3 }], [{ x: 6, y: 4 }]]
+        },
+        {
+            color: 'purple',
+            frames: [[{ x: 8, y: 4 }], [{ x: 8, y: 3 }], [{ x: 8, y: 2 }], [{ x: 8, y: 1 }], [{ x: 8, y: 0 }], [{ x: 9, y: 0 }], [{ x: 10, y: 0 }], [{ x: 10, y: 0 }], [{ x: 10, y: 1 }], [{ x: 10, y: 2 }, { x: 9, y: 2 }], [{ x: 10, y: 3 }], [{ x: 10, y: 4 }]]
+        },
+        {
+            color: 'blue',
+            frames: [[{ x: 12, y: 0 }], [{ x: 12, y: 1 }], [{ x: 12, y: 2 }], [{ x: 12, y: 3 }, { x: 13, y: 2 }], [{ x: 12, y: 4 }, { x: 14, y: 1 }, { x: 14, y: 3 }], [{ x: 14, y: 0 }, { x: 14, y: 4 }]]
+        },
+        {
+            color: 'orange',
+            frames: [[{ x: 18, y: 0 }], [{ x: 17, y: 0 }], [{ x: 16, y: 0 }], [{ x: 16, y: 1 }], [{ x: 16, y: 2 }], [{ x: 16, y: 3 }, { x: 17, y: 2 }], [{ x: 16, y: 4 }], [{ x: 17, y: 4 }], [{ x: 18, y: 4 }]]
+        }
+    ];
+
+    for (const letter of letters) {
+        for (let i = 0; i < letter.frames.length; i++) {
+            setTimeout(() => {
+                for (const cell of letter.frames[i]) {
+                    fillCell(letter.color, cell);
+                }
+            }, i * 100);
+        }
+    }
 }
 
 document.querySelectorAll('.validable').forEach((elem) => {
@@ -392,3 +434,4 @@ document.getElementById('tab-create').addEventListener('change', () => {
 });
 
 new Lobby();
+animateTitle();
