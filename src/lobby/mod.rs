@@ -1,3 +1,5 @@
+pub mod packet;
+
 use std::collections::HashMap;
 use crate::game::{Game, Config};
 use warp::ws::{WebSocket, Message};
@@ -5,10 +7,10 @@ use futures::{StreamExt, SinkExt};
 use tokio::sync::Mutex;
 use std::sync::Arc;
 use futures::stream::SplitSink;
-use crate::size::Size;
+use crate::game::size::Size;
 use tokio::task;
 use futures::future::join_all;
-use crate::packet::Packet;
+use crate::lobby::packet::Packet;
 use std::io::{Cursor, Read};
 use byteorder::{ReadBytesExt, BE};
 

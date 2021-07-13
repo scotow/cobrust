@@ -1,17 +1,13 @@
-use warp::Filter;
 use std::sync::Arc;
+
+use warp::Filter;
 use warp::ws::WebSocket;
+
 use crate::lobby::Lobby;
 
 mod game;
-mod player;
-mod coordinate;
-mod direction;
-mod size;
-mod perk;
-mod cell;
-mod packet;
 mod lobby;
+mod misc;
 
 #[tokio::main]
 async fn main() {

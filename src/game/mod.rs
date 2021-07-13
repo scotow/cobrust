@@ -1,18 +1,29 @@
-use crate::player::Player;
-use tokio::time::sleep;
-use std::time::Duration;
+pub mod cell;
+pub mod coordinate;
+pub mod direction;
+pub mod packet;
+pub mod perk;
+pub mod player;
+pub mod size;
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
 use futures::future::join_all;
-use warp::ws::{Message, WebSocket};
+use futures::stream::SplitStream;
 use futures::StreamExt;
 use tokio::sync::Mutex;
-use std::sync::Arc;
-use crate::coordinate::Coord;
-use std::collections::HashMap;
-use crate::perk::{Food, Perk};
-use crate::cell::Cell;
-use crate::size::Size;
-use crate::packet::{Packet, SnakeChange};
-use futures::stream::SplitStream;
+use tokio::time::sleep;
+use warp::ws::{Message, WebSocket};
+
+use cell::Cell;
+use coordinate::Coord;
+use player::Player;
+use size::Size;
+use packet::Packet;
+use crate::game::packet::SnakeChange;
+use crate::game::perk::{Perk, Food};
 
 pub struct Game {
     pub name: String,
@@ -47,6 +58,7 @@ impl Game {
             grid: vec![vec![Cell::Empty; config.size.width as usize]; config.size.height as usize],
             players: HashMap::new(),
             perks: HashMap::new(),
+            last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
             inner.spawn_food(config.size, config.food_strength);
@@ -64,7 +76,11 @@ impl Game {
     pub async fn run(&self) {
         loop {
             let mut inner = self.inner.lock().await;
-            if !inner.players.is_empty() {
+            if inner.players.is_empty() {
+                if inner.last_leave.elapsed() > Duration::from_secs(60) {
+                    break;
+                }
+            } else {
                 self.walk_snakes(&mut inner).await;
             }
             drop(inner);
@@ -102,6 +118,7 @@ impl Game {
         let player = inner.players.remove(&id).unwrap();
         player.lock().await.body.iter()
             .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
+        inner.last_leave = Instant::now();
         Game::broadcast_message(&inner, Packet::PlayerLeft(id).message().await).await;
     }
 
@@ -195,6 +212,7 @@ struct Inner {
     grid: Vec<Vec<Cell>>,
     players: HashMap<u16, Arc<Mutex<Player>>>,
     perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    last_leave: Instant,
 }
 
 impl Inner {

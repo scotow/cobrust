@@ -1,4 +1,4 @@
-use crate::perk::Perk;
+use crate::game::perk::Perk;
 use std::sync::Arc;
 
 pub enum Cell {

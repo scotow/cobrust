@@ -1,6 +1,6 @@
 use std::ops::Add;
-use crate::direction::Dir;
-use crate::size::Size;
+use crate::game::direction::Dir;
+use crate::game::size::Size;
 use rand::Rng;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]

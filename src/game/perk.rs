@@ -1,4 +1,4 @@
-use crate::player::Player;
+use crate::game::player::Player;
 
 pub trait Perk {
     fn consume(&self, player: &mut Player);
