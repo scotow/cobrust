@@ -190,20 +190,20 @@ class Game {
 
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
-        this.resizeHandler = () => {
-            this.cellSize = Math.max(window.innerWidth / this.size.width | 0, window.innerHeight / this.size.height | 0);
+        this.resizeHandler = (additionalHeight) => {
+            const mainSize = document.getElementById('main').getBoundingClientRect();
+            this.cellSize = Math.max(mainSize.width / this.size.width | 0, (mainSize.height + additionalHeight) / this.size.height | 0);
             this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
-
-            const mainSize = document.getElementById('main').getBoundingClientRect();
-            const scale = Math.min(mainSize.width * 0.9 / this.canvas.width, mainSize.height * 0.9 / this.canvas.height);
+            
+            const scale = Math.min(mainSize.width * 0.9 / this.canvas.width, (mainSize.height + additionalHeight) * 0.9 / this.canvas.height);
             this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
             this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
             this.redrawCanvas();
         };
-        this.resizeHandler();
-        window.addEventListener('resize', this.resizeHandler);
+        this.resizeHandler(75);
+        window.addEventListener('resize', () => this.resizeHandler(0));
 
         const nameLength = data.readUnsignedByte();
         const name = data.readString(nameLength);
@@ -220,7 +220,7 @@ class Game {
         leave.innerText = 'Leave';
         leave.addEventListener('click', () => {
             this.socket.close();
-            document.getElementById('main').classList.replace('playing', 'lobbying');
+            document.body.classList.replace('playing', 'lobbying');
             const game = document.getElementById('game');
             while (game.firstChild) {
                 game.removeChild(game.lastChild);
@@ -229,7 +229,7 @@ class Game {
 
         header.append(title, leave);
         document.getElementById('game').append(header, this.canvas);
-        document.getElementById('main').classList.replace('lobbying', 'playing');
+        document.body.classList.replace('lobbying', 'playing');
     }
 
     redrawCanvas() {

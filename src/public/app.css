@@ -18,23 +18,29 @@ body {
     margin: 0;
 }
 
+body.lobbying #lobby {
+    display: block;
+}
+
 #main {
     flex: 1;
     position: relative;
     height: 100%;
 }
 
-#main.lobbying > #lobby {
-    display: block;
+body.playing #title {
+    height: 50px;
 }
 
-#main.playing > #game {
+body.playing #game {
     display: block;
 }
 
 #title {
     display: block;
+    height: 125px;
     margin: 40px auto 20px;
+    transition: height 200ms;
 }
 
 #lobby {
