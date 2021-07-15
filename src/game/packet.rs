@@ -9,7 +9,7 @@ use crate::packet;
 use crate::misc::ToData;
 
 pub enum Packet<'a> {
-    GameInfo(Size, &'a str),
+    Info(Size, &'a str),
     Snakes(&'a HashMap<u16, Arc<Mutex<Player>>>),
     Perk(Coord),
     PlayerJoined(u16, Coord, (u16, u16)),
@@ -21,7 +21,7 @@ impl<'a> Packet<'a> {
     pub async fn message(self) -> Message {
         use Packet::*;
         let payload = match self {
-            GameInfo(size, name) => {
+            Info(size, name) => {
                 packet![0u8, size.width as u16, size.height as u16, name.as_bytes().len() as u8, name.as_bytes()]
             }
             Snakes(players) => {

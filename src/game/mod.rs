@@ -1,4 +1,5 @@
 pub mod cell;
+pub mod config;
 pub mod coordinate;
 pub mod direction;
 pub mod packet;
@@ -24,6 +25,7 @@ use size::Size;
 use packet::Packet;
 use crate::game::packet::SnakeChange;
 use crate::game::perk::{Perk, Food};
+use crate::game::config::Config;
 
 pub struct Game {
     pub name: String,
@@ -31,25 +33,6 @@ pub struct Game {
     pub speed: u8,
     pub food_strength: u16,
     inner: Arc<Mutex<Inner>>,
-}
-
-pub struct Config {
-    pub name: String,
-    pub size: Size,
-    pub speed: u8,
-    pub foods: u16,
-    pub food_strength: u16,
-}
-
-impl Config {
-    pub fn is_valid(&self) -> bool {
-        (1..=32).contains(&self.name.len()) &&
-            (16..=255).contains(&self.size.width) &&
-            (16..=255).contains(&self.size.height) &&
-            (1..=50).contains(&self.speed) &&
-            (1..=32).contains(&self.foods) &&
-            (0..=1024).contains(&self.food_strength)
-    }
 }
 
 impl Game {
@@ -80,11 +63,13 @@ impl Game {
                 if inner.last_leave.elapsed() > Duration::from_secs(60) {
                     break;
                 }
+                drop(inner);
+                sleep(Duration::from_millis(500)).await;
             } else {
                 self.walk_snakes(&mut inner).await;
+                drop(inner);
+                sleep(Duration::from_millis(1000 / self.speed as u64)).await;
             }
-            drop(inner);
-            sleep(Duration::from_millis(1000 / self.speed as u64)).await;
         }
     }
 
@@ -95,7 +80,7 @@ impl Game {
         let (tx, rx) = socket.split();
         let mut player = Player::new(head, tx);
         let color = player.color;
-        let _ = player.send(Packet::GameInfo(self.size, &self.name).message().await).await;
+        let _ = player.send(Packet::Info(self.size, &self.name).message().await).await;
 
         let id = rand::random();
         let player = Arc::new(Mutex::new(player));

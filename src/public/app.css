@@ -146,7 +146,7 @@ body.playing #game {
 }
 
 #lobby > .games > .content:empty::before {
-    content: 'Head to the create tab to begin';
+    content: 'Head to the \'create\' tab to begin';
     position: absolute;
     top: 50%;
     left: 50%;

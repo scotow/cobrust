@@ -43,15 +43,23 @@ class Lobby {
                 this.addGames(data);
                 break;
             case 1:
-                this.updatePlayerCount(data);
+                this.removeGame(data);
                 break;
             case 2:
+                this.updatePlayerCount(data);
+                break;
+            case 3:
                 this.joinCreated(data);
                 break;
         }
     }
 
     addGames(data) {
+        if (data.available === 0) {    
+            document.getElementById('tab-create').checked = true;
+            document.getElementById('create-name').focus();
+        }
+
         while (data.available) {
             const id = data.readUnsignedShort();
             const nameLength = data.readUnsignedByte();
@@ -66,6 +74,12 @@ class Lobby {
         }
     }
 
+    removeGame(data) {
+        const id = String(data.readUnsignedShort());
+        this.games[id].game.remove();
+        delete this.games[id];
+    }
+
     updatePlayerCount(data) {
         const id = String(data.readUnsignedShort());
         this.games[id].updatePlayerCount(String(data.readUnsignedByte()));
@@ -74,6 +88,9 @@ class Lobby {
     joinCreated(data) {
         const id = data.readUnsignedShort();
         new Game(id);
+
+        document.getElementById('tab-games').checked = true;
+        document.getElementById('create-name').value = '';
     }
 }
 

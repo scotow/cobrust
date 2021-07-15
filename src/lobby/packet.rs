@@ -5,8 +5,9 @@ use crate::packet;
 use crate::misc::ToData;
 
 pub enum Packet<'a> {
-    Games(Vec<(&'a u16, &'a Arc<Game>)>),
-    GamePlayerCount(u16, u8),
+    AddGames(Vec<(&'a u16, &'a Arc<Game>)>),
+    RemoveGame(u16),
+    PlayerCount(u16, u8),
     GameCreated(u16),
 }
 
@@ -14,7 +15,7 @@ impl<'a> Packet<'a> {
     pub async fn message(self) -> Message {
         use Packet::*;
         let payload = match self {
-            Games(games) => {
+            AddGames(games) => {
                 let mut packet = Vec::with_capacity(128);
                 packet.push(0);
                 for (&id, game) in games {
@@ -26,12 +27,15 @@ impl<'a> Packet<'a> {
                     ];
                 }
                 packet
-            }
-            GamePlayerCount(id, count) => {
-                packet![1u8, id, count]
+            },
+            RemoveGame(id) => {
+                packet![1u8, id]
+            },
+            PlayerCount(id, count) => {
+                packet![2u8, id, count]
             },
             GameCreated(id) => {
-                packet![2u8, id]
+                packet![3u8, id]
             },
         };
         Message::binary(payload)
