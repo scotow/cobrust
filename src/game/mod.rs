@@ -24,7 +24,7 @@ use player::Player;
 use size::Size;
 use packet::Packet;
 use crate::game::packet::SnakeChange;
-use crate::game::perk::{Perk, Food};
+use crate::game::perk::{Perk, Generator};
 use crate::game::config::Config;
 
 pub struct Game {
@@ -41,10 +41,11 @@ impl Game {
             grid: vec![vec![Cell::Empty; config.size.width as usize]; config.size.height as usize],
             players: HashMap::new(),
             perks: HashMap::new(),
+            perk_generator: Generator::new(config.food_strength, config.reserved_food),
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
-            inner.spawn_food(config.size, config.food_strength);
+            inner.add_perk(config.size, Arc::new(Box::new(inner.perk_generator.fresh_food())));
         }
 
         Self {
@@ -78,11 +79,11 @@ impl Game {
 
         let head = inner.safe_place(self.size);
         let (tx, rx) = socket.split();
+        let id = rand::random();
         let mut player = Player::new(head, tx);
         let color = player.color;
-        let _ = player.send(Packet::Info(self.size, &self.name).message().await).await;
+        let _ = player.send(Packet::Info(self.size, &self.name, id).message().await).await;
 
-        let id = rand::random();
         let player = Arc::new(Mutex::new(player));
         inner.players.insert(id, Arc::clone(&player));
         inner.grid[head.y][head.x] = Cell::Occupied;
@@ -92,8 +93,8 @@ impl Game {
             let snakes_message = Packet::Snakes(&inner.players).message().await;
             let mut player = player.lock().await;
             let _ = player.send(snakes_message).await;
-            for &coord in inner.perks.keys() {
-                let _ = player.send(Packet::Perk(coord).message().await).await;
+            for (coord, perk) in &inner.perks {
+                let _ = player.send(Packet::Perk(*coord, Arc::clone(perk)).message().await).await;
             }
         }
         drop(inner);
@@ -160,14 +161,20 @@ impl Game {
                     payload.push(SnakeChange::Die(id, head));
                 },
                 Cell::Perk(perk) => {
-                    perk.consume(&mut *player.lock().await);
+                    perk.consume((id, &mut *player.lock().await));
                     inner.perks.remove(&new);
 
+                    let is_food = perk.spawn_more();
                     *target = Cell::Occupied;
                     payload.push(SnakeChange::Add(id, new));
 
-                    let new_food = inner.spawn_food(self.size, self.food_strength);
-                    Game::broadcast_message(inner, Packet::Perk(new_food).message().await).await;
+                    if is_food {
+                        for perk in inner.perk_generator.next(id) {
+                            let perk = Arc::new(perk);
+                            let coord = inner.add_perk(self.size, Arc::clone(&perk));
+                            Game::broadcast_message(inner, Packet::Perk(coord, perk).message().await).await;
+                        }
+                    }
                 },
             }
         }
@@ -197,6 +204,7 @@ struct Inner {
     grid: Vec<Vec<Cell>>,
     players: HashMap<u16, Arc<Mutex<Player>>>,
     perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    perk_generator: Generator,
     last_leave: Instant,
 }
 
@@ -210,11 +218,10 @@ impl Inner {
         }
     }
 
-    fn spawn_food(&mut self, size: Size, strength: u16) -> Coord {
+    fn add_perk(&mut self, size: Size, perk: Arc<Box<dyn Perk + Send + Sync>>) -> Coord {
         let coord = self.safe_place(size);
-        let food: Arc<Box<dyn Perk + Send + Sync>> = Arc::new(Box::new(Food(strength)));
-        self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&food));
-        self.perks.insert(coord, food);
+        self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&perk));
+        self.perks.insert(coord, Arc::clone(&perk));
         coord
     }
 }

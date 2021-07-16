@@ -17,13 +17,14 @@ class Lobby {
                 const height = Number(document.getElementById('create-height').value);
                 const speed = Number(document.getElementById('create-speed').value);
                 const foods = Number(document.getElementById('create-foods').value);
-                const food_strength = Number(document.getElementById('create-food-strength').value);
+                const foodStrength = Number(document.getElementById('create-food-strength').value);
+                const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2);
+                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
@@ -31,7 +32,8 @@ class Lobby {
                 data.writeUnsignedShort(height);
                 data.writeUnsignedByte(speed);
                 data.writeUnsignedShort(foods);
-                data.writeUnsignedShort(food_strength);
+                data.writeUnsignedShort(foodStrength);
+                data.writeUnsignedByte(reservedFood);
                 this.socket.send(data.buffer);
             });
         });
@@ -224,6 +226,7 @@ class Game {
 
         const nameLength = data.readUnsignedByte();
         const name = data.readString(nameLength);
+        this.selfId = data.readUnsignedShort();
 
         const header = document.createElement('div');
         header.classList.add('header');
@@ -263,8 +266,8 @@ class Game {
                 this.drawCell(player.body[i]);
             }
         }
-        for (const id in this.perks) {
-            this.drawPerk(this.perks[id]);
+        for (const coordStr in this.perks) {
+            this.drawPerk(this.perks[coordStr]);
         }
     }
 
@@ -363,8 +366,15 @@ class Game {
             x: data.readUnsignedShort(),
             y: data.readUnsignedShort(),
         };
-        this.perks[`${coord.x},${coord.y}`] = coord;
-        this.drawPerk(coord);
+        const id = data.readUnsignedByte();
+        const perk = { coord, id };
+        switch (id) {
+            case 1:
+                perk.owner = data.readUnsignedShort();
+                break;
+        }
+        this.perks[`${coord.x},${coord.y}`] = perk;
+        this.drawPerk(perk);
     }
 
     clearMode() {
@@ -381,10 +391,18 @@ class Game {
         }
     }
 
-    drawPerk(coord) {
-        this.context.fillStyle = 'white';
+    drawPerk(perk) {
+        switch (perk.id) {
+            case 0:
+                this.context.fillStyle = '#00ff00';
+                break;
+            case 1:
+                this.context.fillStyle = perk.owner === this.selfId ? '#1e90ff' : '#0C3B66';
+                break;
+            default: return;
+        }
         this.context.beginPath();
-        this.context.arc(BORDER_WIDTH + coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
+        this.context.arc(BORDER_WIDTH + perk.coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + perk.coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
     }
 }

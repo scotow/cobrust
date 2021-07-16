@@ -7,11 +7,12 @@ use tokio::sync::Mutex;
 use crate::game::coordinate::Coord;
 use crate::packet;
 use crate::misc::ToData;
+use crate::game::perk::Perk;
 
 pub enum Packet<'a> {
-    Info(Size, &'a str),
+    Info(Size, &'a str, u16),
     Snakes(&'a HashMap<u16, Arc<Mutex<Player>>>),
-    Perk(Coord),
+    Perk(Coord, Arc<Box<dyn Perk + Sync + Send>>),
     PlayerJoined(u16, Coord, (u16, u16)),
     PlayerLeft(u16),
     SnakeChanges(Vec<SnakeChange>),
@@ -21,8 +22,8 @@ impl<'a> Packet<'a> {
     pub async fn message(self) -> Message {
         use Packet::*;
         let payload = match self {
-            Info(size, name) => {
-                packet![0u8, size.width as u16, size.height as u16, name.as_bytes().len() as u8, name.as_bytes()]
+            Info(size, name, self_id) => {
+                packet![0u8, size.width as u16, size.height as u16, name.as_bytes().len() as u8, name.as_bytes(), self_id]
             }
             Snakes(players) => {
                 let mut packet = Vec::with_capacity(128);
@@ -36,8 +37,8 @@ impl<'a> Packet<'a> {
                 }
                 packet
             },
-            Perk(coord) => {
-                packet![2u8, coord.x as u16, coord.y as u16]
+            Perk(coord, perk) => {
+                packet![2u8, coord.x as u16, coord.y as u16, perk]
             }
             PlayerJoined(id, head, color) => {
                 packet![3u8, id, color.0, color.1, head.x as u16, head.y as u16]

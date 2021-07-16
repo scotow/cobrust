@@ -8,6 +8,7 @@ pub struct Config {
     pub speed: u8,
     pub foods: u16,
     pub food_strength: u16,
+    pub reserved_food: bool,
 }
 
 impl Config {
@@ -25,8 +26,9 @@ impl Config {
         let speed = data.read_u8().ok()?;
         let foods = data.read_u16::<BE>().ok()?;
         let food_strength = data.read_u16::<BE>().ok()?;
+        let reserved_food = data.read_u8().ok()? > 0;
 
-        Some(Self { name, size, speed, foods, food_strength })
+        Some(Self { name, size, speed, foods, food_strength, reserved_food })
     }
 
     pub fn is_valid(&self) -> bool {
