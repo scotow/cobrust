@@ -160,7 +160,7 @@ class Game {
                 this.setPlayers(data);
                 break;
             case 2:
-                this.addPerk(data);
+                this.addPerks(data);
                 break;
             case 3:
                 this.addPlayer(data);
@@ -361,20 +361,22 @@ class Game {
         }
     }
 
-    addPerk(data) {
-        const coord = {
-            x: data.readUnsignedShort(),
-            y: data.readUnsignedShort(),
-        };
-        const id = data.readUnsignedByte();
-        const perk = { coord, id };
-        switch (id) {
-            case 1:
-                perk.owner = data.readUnsignedShort();
-                break;
+    addPerks(data) {
+        while (data.available) {
+            const coord = {
+                x: data.readUnsignedShort(),
+                y: data.readUnsignedShort(),
+            };
+            const id = data.readUnsignedByte();
+            const perk = { coord, id };
+            switch (id) {
+                case 1:
+                    perk.owner = data.readUnsignedShort();
+                    break;
+            }
+            this.perks[`${coord.x},${coord.y}`] = perk;
+            this.drawPerk(perk);
         }
-        this.perks[`${coord.x},${coord.y}`] = perk;
-        this.drawPerk(perk);
     }
 
     clearMode() {

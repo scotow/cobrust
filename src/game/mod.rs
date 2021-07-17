@@ -16,7 +16,7 @@ use futures::stream::SplitStream;
 use futures::StreamExt;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use warp::ws::{Message, WebSocket};
+use warp::ws::WebSocket;
 
 use cell::Cell;
 use coordinate::Coord;
@@ -82,30 +82,39 @@ impl Game {
         let id = rand::random();
         let mut player = Player::new(head, tx);
         let color = player.color;
-        let _ = player.send(Packet::Info(self.size, &self.name, id).message().await).await;
+        let _ = player.send(Packet::Info(self.size, &self.name, id).message()).await;
 
+        // Add player to game.
+        inner.broadcast_message(Packet::PlayerJoined(id, head, color)).await;
         let player = Arc::new(Mutex::new(player));
         inner.players.insert(id, Arc::clone(&player));
         inner.grid[head.y][head.x] = Cell::Occupied;
-        inner.broadcast_message(Packet::PlayerJoined(id, head, color).message().await).await;
 
-        {
-            let snakes_message = Packet::Snakes(&inner.players).message().await;
-            let mut player = player.lock().await;
-            let _ = player.send(snakes_message).await;
-            for (coord, perk) in &inner.perks {
-                let _ = player.send(Packet::Perk(*coord, Arc::clone(perk)).message().await).await;
-            }
-        }
+        // Send snakes info.
+        let snakes_message = Packet::Snakes(join_all(
+            inner.players.iter().map(|(&id, p)| {
+                async move { (id, p.lock().await) }
+            })).await).message();
+        let mut player_lock = player.lock().await;
+        player_lock.send(snakes_message).await;
+
+        // Send perks info.
+        let perks = inner.perks.iter().map(|(c, p)| (*c, Arc::clone(p))).collect::<Vec<_>>();
+        player_lock.send(Packet::Perks(perks).message()).await;
+        drop(player_lock);
         drop(inner);
 
+        // Process events.
         self.player_loop(player, rx).await;
+        // Player left from here.
+
+        // Remove and clean player.
         let mut inner = self.inner.lock().await;
         let player = inner.players.remove(&id).unwrap();
         player.lock().await.body.iter()
             .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
         inner.last_leave = Instant::now();
-        inner.broadcast_message(Packet::PlayerLeft(id).message().await).await;
+        inner.broadcast_message(Packet::PlayerLeft(id)).await;
     }
 
     async fn player_loop(&self, player: Arc<Mutex<Player>>, mut rx: SplitStream<WebSocket>) {
@@ -121,14 +130,14 @@ impl Game {
             let data = message.as_bytes();
             match data[0] {
                 0 => player.lock().await.process(&data[1..]).await,
-                _ => (),
+                _ => break,
             }
         };
         // Player left the game from here.
     }
 
     async fn walk_snakes(&self, inner: &mut Inner) {
-        let changes = join_all(
+        let walks = join_all(
             inner.players.iter().map(|(&id, p)| {
                 async move {
                     p.lock().await
@@ -137,19 +146,20 @@ impl Game {
                 }
             })).await;
 
-        let mut payload = Vec::with_capacity(changes.len() * 2);
-        for (id, player, (removed, new)) in changes.into_iter()
+        let mut changes = Vec::with_capacity(walks.len() * 2);
+        let mut perks = Vec::with_capacity(inner.players.len());
+        for (id, player, (removed, new)) in walks.into_iter()
             .filter_map(|e| e) {
             if let Some(removed) = removed {
                 inner.grid[removed.y][removed.x] = Cell::Empty;
-                payload.push(SnakeChange::Remove(id));
+                changes.push(SnakeChange::Remove(id));
             }
 
             let target = &mut inner.grid[new.y][new.x];
             match target {
                 Cell::Empty => {
                     *target = Cell::Occupied;
-                    payload.push(SnakeChange::Add(id, new));
+                    changes.push(SnakeChange::Add(id, new));
                 },
                 Cell::Occupied => {
                     let mut player = player.lock().await;
@@ -158,27 +168,33 @@ impl Game {
                     let head = inner.safe_place(self.size);
                     player.respawn(head).await;
                     inner.grid[head.y][head.x] = Cell::Occupied;
-                    payload.push(SnakeChange::Die(id, head));
+                    changes.push(SnakeChange::Die(id, head));
                 },
                 Cell::Perk(perk) => {
+                    let need_food = perk.make_spawn_food();
                     perk.consume((id, &mut *player.lock().await));
                     inner.perks.remove(&new);
 
-                    let need_food = perk.make_spawn_food();
                     *target = Cell::Occupied;
-                    payload.push(SnakeChange::Add(id, new));
+                    changes.push(SnakeChange::Add(id, new));
 
                     if need_food {
                         for perk in inner.perk_generator.next(id) {
                             let perk = Arc::new(perk);
                             let coord = inner.add_perk(self.size, Arc::clone(&perk));
-                            inner.broadcast_message(Packet::Perk(coord, perk).message().await).await;
+                            perks.push((coord, perk));
                         }
                     }
                 },
             }
         }
-        inner.broadcast_message(Packet::SnakeChanges(payload).message().await).await;
+
+        if !changes.is_empty() {
+            inner.broadcast_message(Packet::SnakeChanges(changes)).await;
+        }
+        if !perks.is_empty() {
+            inner.broadcast_message(Packet::Perks(perks)).await;
+        }
     }
 
     pub async fn player_count(&self) -> usize {
@@ -211,10 +227,11 @@ impl Inner {
         coord
     }
 
-    async fn broadcast_message(&self, message: Message) {
+    async fn broadcast_message(&self, packet: Packet<'_>) {
         if self.players.is_empty() {
             return;
         }
+        let message = packet.message();
         join_all(self.players.values()
             .map(|p| {
                 let message = message.clone();
