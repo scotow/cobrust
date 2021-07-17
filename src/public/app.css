@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css?family=Anton');
 
+input[type='number'] {
+    -moz-appearance:textfield;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
 html {
     height: 100%;
     font-size: 0;
@@ -145,6 +154,10 @@ body.playing #game {
     transform: translateY(-1px);
 }
 
+#lobby > .games > .content {
+    padding: 8px;
+}
+
 #lobby > .games > .content:empty::before {
     content: 'Head to the \'create\' tab to begin';
     position: absolute;
@@ -163,10 +176,10 @@ body.playing #game {
 #lobby > .games > .content > .game {
     display: flex;
     justify-content: center;
-    margin: 8px;
-    padding: 8px 8px;
-    background: #272B30;
+    margin-bottom: 8px;
+    padding: 8px;
     font-size: 16px;
+    background: #272B30;
     border-radius: 3px;
     transition: opacity 250ms;
 }
@@ -222,7 +235,6 @@ body.playing #game {
     flex-direction: column;
     justify-content: space-between;
     padding: 12px;
-    color: lightgray;
 }
 
 #lobby > .create > .content > .settings > .section {
@@ -238,6 +250,7 @@ body.playing #game {
 #lobby > .create > .content > .settings > .section > .input > .label {
     margin-bottom: 2px;
     font-size: 12px;
+    color: lightgray;
 }
 
 #lobby > .create > .content > .settings > .section > .input > input:valid {
@@ -312,7 +325,71 @@ body.playing #game {
 }
 
 #lobby > .rules > .content {
-    font-size: 22px;
+    padding: 12px;
+}
+
+#lobby > .rules > .content > .section {
+    margin-bottom: 20px;
+}
+
+#lobby > .rules > .content > .section > .title {
+    margin-bottom: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+}
+
+#lobby > .rules > .content > .section > .text {
+    font-size: 14px;
+    font-weight: bold;
+    color: lightgray;
+    line-height: 1.4em;
+}
+
+#lobby > .rules > .content > .section > .perk {
+    margin-bottom: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    color: lightgray;
+}
+
+#lobby > .rules > .content > .section > .perk > .color {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+
+#lobby > .rules > .content > .section > .perk > .color.food {
+    background: #00ff00;
+}
+
+#lobby > .rules > .content > .section > .perk > .color.reserved-food {
+    position: relative;
+    background: #1e90ff;
+    transform: rotate(120deg);
+}
+
+#lobby > .rules > .content > .section > .perk > .color.reserved-food::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 14px;
+    height: 7px;
+    border-radius: 10.5px 10.5px 0 0;
+    background: #0c3b66;
+    transform: translate(-50%, 0);
+}
+
+#lobby > .rules > .content > .section > .perk > .info {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    color: lightgray;
+    vertical-align: middle;
 }
 
 #game {
