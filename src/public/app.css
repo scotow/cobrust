@@ -38,7 +38,7 @@ body.playing #game {
 
 #title {
     display: block;
-    height: 125px;
+    height: 137px;
     margin: 40px auto 20px;
     transition: height 200ms;
 }

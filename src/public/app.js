@@ -216,12 +216,12 @@ class Game {
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
             
-            const scale = Math.min(mainSize.width * 0.9 / this.canvas.width, (mainSize.height + additionalHeight) * 0.9 / this.canvas.height);
+            const scale = Math.min(mainSize.width * 0.9 / this.canvas.width, (mainSize.height + additionalHeight) * 0.95 / this.canvas.height);
             this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
             this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
             this.redrawCanvas();
         };
-        this.resizeHandler(75);
+        this.resizeHandler(87);
         window.addEventListener('resize', () => this.resizeHandler(0));
 
         const nameLength = data.readUnsignedByte();
@@ -419,9 +419,9 @@ function hslFromShort(color) {
 
 function animateTitle() {
     const context = document.getElementById('title').getContext('2d');
-    function fillCell(color, { x, y }) {
+    function fillCell(color, { x, y }, shift) {
         context.fillStyle = color;
-        context.fillRect(x * 25 + 1, y * 25 + 1, 23, 23);
+        context.fillRect(x * 25 + 1, y * 25 + 1 + (shift ? 12 : 0), 23, 23);
     }
 
     const letters = [
@@ -447,11 +447,11 @@ function animateTitle() {
         }
     ];
 
-    for (const letter of letters) {
-        for (let i = 0; i < letter.frames.length; i++) {
+    for (let l = 0; l < letters.length; l++) {
+        for (let i = 0; i < letters[l].frames.length; i++) {
             setTimeout(() => {
-                for (const cell of letter.frames[i]) {
-                    fillCell(letter.color, cell);
+                for (const cell of letters[l].frames[i]) {
+                    fillCell(letters[l].color, cell, l % 2 === 1);
                 }
             }, i * 100);
         }
