@@ -5,7 +5,7 @@ use byteorder::{WriteBytesExt, BE};
 pub trait Perk: ToData {
     fn consume(&self, player: (u16, &mut Player));
 
-    fn spawn_more(&self) -> bool {
+    fn make_spawn_food(&self) -> bool {
         false
     }
 }
@@ -59,7 +59,7 @@ impl Perk for Food {
         player.1.grow(self.0);
     }
 
-    fn spawn_more(&self) -> bool {
+    fn make_spawn_food(&self) -> bool {
         true
     }
 }

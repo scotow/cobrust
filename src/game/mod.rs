@@ -87,7 +87,7 @@ impl Game {
         let player = Arc::new(Mutex::new(player));
         inner.players.insert(id, Arc::clone(&player));
         inner.grid[head.y][head.x] = Cell::Occupied;
-        Game::broadcast_message(&inner, Packet::PlayerJoined(id, head, color).message().await).await;
+        inner.broadcast_message(Packet::PlayerJoined(id, head, color).message().await).await;
 
         {
             let snakes_message = Packet::Snakes(&inner.players).message().await;
@@ -105,7 +105,7 @@ impl Game {
         player.lock().await.body.iter()
             .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
         inner.last_leave = Instant::now();
-        Game::broadcast_message(&inner, Packet::PlayerLeft(id).message().await).await;
+        inner.broadcast_message(Packet::PlayerLeft(id).message().await).await;
     }
 
     async fn player_loop(&self, player: Arc<Mutex<Player>>, mut rx: SplitStream<WebSocket>) {
@@ -164,35 +164,21 @@ impl Game {
                     perk.consume((id, &mut *player.lock().await));
                     inner.perks.remove(&new);
 
-                    let is_food = perk.spawn_more();
+                    let need_food = perk.make_spawn_food();
                     *target = Cell::Occupied;
                     payload.push(SnakeChange::Add(id, new));
 
-                    if is_food {
+                    if need_food {
                         for perk in inner.perk_generator.next(id) {
                             let perk = Arc::new(perk);
                             let coord = inner.add_perk(self.size, Arc::clone(&perk));
-                            Game::broadcast_message(inner, Packet::Perk(coord, perk).message().await).await;
+                            inner.broadcast_message(Packet::Perk(coord, perk).message().await).await;
                         }
                     }
                 },
             }
         }
-        Game::broadcast_message(inner, Packet::SnakeChanges(payload).message().await).await;
-    }
-
-    async fn broadcast_message(inner: &Inner, message: Message) {
-        if inner.players.is_empty() {
-            return;
-        }
-        join_all(inner.players.values()
-            .map(|p| {
-                let message = message.clone();
-                async move {
-                    p.lock().await.send(message).await;
-                }
-            })
-        ).await;
+        inner.broadcast_message(Packet::SnakeChanges(payload).message().await).await;
     }
 
     pub async fn player_count(&self) -> usize {
@@ -223,5 +209,19 @@ impl Inner {
         self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&perk));
         self.perks.insert(coord, Arc::clone(&perk));
         coord
+    }
+
+    async fn broadcast_message(&self, message: Message) {
+        if self.players.is_empty() {
+            return;
+        }
+        join_all(self.players.values()
+            .map(|p| {
+                let message = message.clone();
+                async move {
+                    p.lock().await.send(message).await;
+                }
+            })
+        ).await;
     }
 }
