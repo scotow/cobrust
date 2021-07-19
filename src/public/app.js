@@ -57,11 +57,6 @@ class Lobby {
     }
 
     addGames(data) {
-        if (data.available === 0) {    
-            document.getElementById('tab-create').checked = true;
-            document.getElementById('create-name').focus();
-        }
-
         while (data.available) {
             const id = data.readUnsignedShort();
             const nameLength = data.readUnsignedByte();
