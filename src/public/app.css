@@ -31,10 +31,8 @@ body.lobbying #lobby {
     display: block;
 }
 
-#main {
-    flex: 1;
-    position: relative;
-    height: 100%;
+body.playing {
+    overflow: hidden;
 }
 
 body.playing #title {
@@ -50,6 +48,11 @@ body.playing #game {
     height: 137px;
     margin: 40px auto 20px;
     transition: height 200ms;
+}
+
+#main {
+    flex: 1;
+    position: relative;
 }
 
 #lobby {

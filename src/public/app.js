@@ -216,7 +216,7 @@ class Game {
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
             
-            const scale = Math.min(mainSize.width * 0.9 / this.canvas.width, (mainSize.height + additionalHeight) * 0.95 / this.canvas.height);
+            const scale = Math.min((mainSize.width - 60) / this.canvas.width, (mainSize.height + additionalHeight - 27 - 60) / this.canvas.height);
             this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
             this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
             this.redrawCanvas();
