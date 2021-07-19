@@ -3,7 +3,7 @@ use crate::misc::ToData;
 use byteorder::{WriteBytesExt, BE};
 
 pub trait Perk: ToData {
-    fn consume(&self, player: (u16, &mut Player));
+    fn consume(&self, id: u16, player: &mut Player);
 
     fn make_spawn_food(&self) -> bool {
         false
@@ -55,8 +55,8 @@ impl Generator {
 pub struct Food(pub u16);
 
 impl Perk for Food {
-    fn consume(&self,  player: (u16, &mut Player)) {
-        player.1.grow(self.0);
+    fn consume(&self, _id: u16, player: &mut Player) {
+        player.grow(self.0);
     }
 
     fn make_spawn_food(&self) -> bool {
@@ -76,9 +76,9 @@ pub struct ReservedFood {
 }
 
 impl Perk for ReservedFood {
-    fn consume(&self,  player: (u16, &mut Player)) {
-        if player.0 == self.owner {
-            player.1.grow(self.strength);
+    fn consume(&self, id: u16, player: &mut Player) {
+        if id == self.owner {
+            player.grow(self.strength);
         }
     }
 }

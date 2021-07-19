@@ -144,56 +144,77 @@ impl Game {
                         .walk(self.size).await
                         .map(|cs| (id, Arc::clone(p), cs))
                 }
-            })).await;
+            })).await
+            .into_iter()
+            .filter_map(|m| m)
+            .collect::<Vec<_>>();
 
+        let mut need_respawn = Vec::new();
+        let mut perk_consumed = Vec::new();
         let mut changes = Vec::with_capacity(walks.len() * 2);
-        let mut perks = Vec::with_capacity(inner.players.len());
-        for (id, player, (removed, new)) in walks.into_iter()
-            .filter_map(|e| e) {
+        let mut new_perks = Vec::new();
+
+        // Free all tails.
+        for (id, _player, (removed, _new)) in walks.iter() {
             if let Some(removed) = removed {
                 inner.grid[removed.y][removed.x] = Cell::Empty;
-                changes.push(SnakeChange::Remove(id));
+                changes.push(SnakeChange::Remove(*id));
             }
+        }
 
-            let target = &mut inner.grid[new.y][new.x];
-            match target {
+        // Create new heads, handle collisions and apply perks.
+        let collisions = walks.iter()
+            .fold(HashMap::with_capacity(walks.len()), |mut acc, (_, _, (_, new))| {
+            *acc.entry(new).or_insert(0u16) += 1;
+            acc
+        });
+        for (id, player, (_removed, new)) in walks.iter() {
+            match &inner.grid[new.y][new.x] {
                 Cell::Empty => {
-                    *target = Cell::Occupied;
-                    changes.push(SnakeChange::Add(id, new));
-                },
-                Cell::Occupied => {
-                    let mut player = player.lock().await;
-                    player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
-
-                    let head = inner.safe_place(self.size);
-                    player.respawn(head).await;
-                    inner.grid[head.y][head.x] = Cell::Occupied;
-                    changes.push(SnakeChange::Die(id, head));
-                },
-                Cell::Perk(perk) => {
-                    let need_food = perk.make_spawn_food();
-                    perk.consume((id, &mut *player.lock().await));
-                    inner.perks.remove(&new);
-
-                    *target = Cell::Occupied;
-                    changes.push(SnakeChange::Add(id, new));
-
-                    if need_food {
-                        for perk in inner.perk_generator.next(id) {
-                            let perk = Arc::new(perk);
-                            let coord = inner.add_perk(self.size, Arc::clone(&perk));
-                            perks.push((coord, perk));
-                        }
+                    if *collisions.get(new).unwrap() == 1 {
+                        inner.grid[new.y][new.x] = Cell::Occupied;
+                        changes.push(SnakeChange::Add(*id, *new));
+                    } else {
+                        need_respawn.push((*id, Arc::clone(player)));
                     }
                 },
+                Cell::Occupied => {
+                    need_respawn.push((*id, Arc::clone(player)));
+                },
+                Cell::Perk(perk) => {
+                    perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
+                    inner.grid[new.y][new.x] = Cell::Occupied;
+                    inner.perks.remove(new);
+                    changes.push(SnakeChange::Add(*id, *new));
+                },
+            }
+        }
+
+        // Process respawns and generate perks.
+        for (id, player) in need_respawn {
+            let mut player = player.lock().await;
+            player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
+            let head = inner.safe_place(self.size);
+            player.respawn(head).await;
+            inner.grid[head.y][head.x] = Cell::Occupied;
+            changes.push(SnakeChange::Die(id, head));
+        }
+        for (id, player, perk) in perk_consumed {
+            perk.consume(id, &mut *player.lock().await);
+            if perk.make_spawn_food() {
+                for perk in inner.perk_generator.next(id) {
+                    let perk = Arc::new(perk);
+                    let coord = inner.add_perk(self.size, Arc::clone(&perk));
+                    new_perks.push((coord, perk));
+                }
             }
         }
 
         if !changes.is_empty() {
             inner.broadcast_message(Packet::SnakeChanges(changes)).await;
         }
-        if !perks.is_empty() {
-            inner.broadcast_message(Packet::Perks(perks)).await;
+        if !new_perks.is_empty() {
+            inner.broadcast_message(Packet::Perks(new_perks)).await;
         }
     }
 
