@@ -1,9 +1,11 @@
 use std::sync::Arc;
-use crate::game::Game;
+
 use warp::filters::ws::Message;
-use crate::packet;
-use crate::misc::ToData;
+
+use crate::game::Game;
 use crate::lobby::GameId;
+use crate::misc::ToData;
+use crate::packet;
 
 pub enum Packet<'a> {
     AddGames(Vec<(&'a GameId, &'a Arc<Game>)>),

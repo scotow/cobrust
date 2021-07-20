@@ -1,13 +1,15 @@
+use std::collections::VecDeque;
+use std::convert::TryFrom;
+
+use futures::SinkExt;
+use futures::stream::SplitSink;
+use rand::Rng;
+use tokio::sync::Mutex;
+use warp::ws::{Message, WebSocket};
+
 use crate::game::coordinate::Coord;
 use crate::game::direction::Dir;
-use tokio::sync::Mutex;
-use std::collections::VecDeque;
-use futures::stream::SplitSink;
-use warp::ws::{Message, WebSocket};
-use futures::SinkExt;
-use std::convert::TryFrom;
 use crate::game::size::Size;
-use rand::Rng;
 
 const START_SIZE: u16 = 9;
 

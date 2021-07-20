@@ -1,12 +1,14 @@
-use crate::game::size::Size;
-use crate::game::player::{Player, PlayerId};
-use warp::ws::Message;
 use std::sync::Arc;
+
 use tokio::sync::MutexGuard;
+use warp::ws::Message;
+
 use crate::game::coordinate::Coord;
-use crate::packet;
-use crate::misc::ToData;
 use crate::game::perk::Perk;
+use crate::game::player::{Player, PlayerId};
+use crate::game::size::Size;
+use crate::misc::ToData;
+use crate::packet;
 
 pub enum Packet<'a> {
     Info(Size, &'a str, PlayerId),

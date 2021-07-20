@@ -1,7 +1,9 @@
 use std::ops::Add;
+
+use rand::Rng;
+
 use crate::game::direction::Dir;
 use crate::game::size::Size;
-use rand::Rng;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Coord {

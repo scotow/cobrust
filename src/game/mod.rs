@@ -1,12 +1,3 @@
-pub mod cell;
-pub mod config;
-pub mod coordinate;
-pub mod direction;
-pub mod packet;
-pub mod perk;
-pub mod player;
-pub mod size;
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -20,13 +11,23 @@ use warp::ws::WebSocket;
 
 use cell::Cell;
 use coordinate::Coord;
+use packet::Packet;
 use player::Player;
 use size::Size;
-use packet::Packet;
-use crate::game::packet::SnakeChange;
-use crate::game::perk::{Perk, Generator};
+
 use crate::game::config::Config;
+use crate::game::packet::SnakeChange;
+use crate::game::perk::{Generator, Perk};
 use crate::game::player::PlayerId;
+
+pub mod cell;
+pub mod config;
+pub mod coordinate;
+pub mod direction;
+pub mod packet;
+pub mod perk;
+pub mod player;
+pub mod size;
 
 pub struct Game {
     pub name: String,

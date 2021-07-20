@@ -1,16 +1,19 @@
-pub mod packet;
-
 use std::collections::HashMap;
-use crate::game::Game;
-use warp::ws::{WebSocket, Message};
-use futures::{StreamExt, SinkExt};
-use tokio::sync::Mutex;
 use std::sync::Arc;
-use futures::stream::SplitSink;
-use tokio::task;
+
+use futures::{SinkExt, StreamExt};
 use futures::future::join_all;
+use futures::stream::SplitSink;
+use tokio::sync::Mutex;
+use tokio::task;
+use warp::ws::{Message, WebSocket};
+
 use packet::Packet;
+
 use crate::game::config::Config;
+use crate::game::Game;
+
+pub mod packet;
 
 type GameId = u16;
 type UserId = u16;

@@ -1,6 +1,8 @@
-use crate::game::size::Size;
 use std::io::{Cursor, Read};
-use byteorder::{ReadBytesExt, BE};
+
+use byteorder::{BE, ReadBytesExt};
+
+use crate::game::size::Size;
 
 pub struct Config {
     pub name: String,

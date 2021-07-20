@@ -1,5 +1,6 @@
-use crate::game::perk::Perk;
 use std::sync::Arc;
+
+use crate::game::perk::Perk;
 use crate::game::player::PlayerId;
 
 pub enum Cell {

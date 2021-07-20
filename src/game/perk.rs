@@ -1,7 +1,9 @@
+use std::mem::size_of;
+
+use byteorder::{BE, WriteBytesExt};
+
 use crate::game::player::{Player, PlayerId};
 use crate::misc::ToData;
-use byteorder::{WriteBytesExt, BE};
-use std::mem::size_of;
 
 pub trait Perk: ToData {
     fn consume(&self, id: PlayerId, player: &mut Player);
