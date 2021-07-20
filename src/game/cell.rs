@@ -1,14 +1,9 @@
 use crate::game::perk::Perk;
 use std::sync::Arc;
+use crate::game::player::PlayerId;
 
 pub enum Cell {
     Empty,
-    Occupied,
+    Occupied(PlayerId),
     Perk(Arc<Box<dyn Perk + Send + Sync>>),
-}
-
-impl Clone for Cell {
-    fn clone(&self) -> Self {
-        Cell::Empty
-    }
 }

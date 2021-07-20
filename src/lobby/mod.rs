@@ -9,13 +9,14 @@ use std::sync::Arc;
 use futures::stream::SplitSink;
 use tokio::task;
 use futures::future::join_all;
-use crate::lobby::packet::Packet;
+use packet::Packet;
 use crate::game::config::Config;
+
+type GameId = u16;
+type UserId = u16;
 
 pub struct Lobby {
     inner: Arc<Mutex<Inner>>,
-    // games: Arc<Mutex<HashMap<u16, Arc<Game>>>>,
-    // users: Arc<Mutex<HashMap<u16, Arc<Mutex<SplitSink<WebSocket, Message>>>>>>,
 }
 
 impl Lobby {
@@ -33,9 +34,7 @@ impl Lobby {
         let (mut tx, mut rx) = socket.split();
 
         let mut inner = self.inner.lock().await;
-        let games_message = Packet::AddGames(
-            inner.games.iter().collect()
-        ).message().await;
+        let games_message = Packet::AddGames(inner.games.iter().collect()).message().await;
         tx.send(games_message).await.unwrap();
 
         let tx = Arc::new(Mutex::new(tx));
@@ -81,7 +80,7 @@ impl Lobby {
         self.inner.lock().await.users.remove(&id);
     }
 
-    pub async fn play(&self, id: u16, socket: WebSocket) {
+    pub async fn play(&self, id: GameId, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
         let game = Arc::clone(inner.games.get(&id).unwrap());
         inner.broadcast_message(
@@ -97,12 +96,12 @@ impl Lobby {
 }
 
 struct Inner {
-    games: HashMap<u16, Arc<Game>>,
-    users: HashMap<u16, Arc<Mutex<SplitSink<WebSocket, Message>>>>,
+    games: HashMap<GameId, Arc<Game>>,
+    users: HashMap<UserId, Arc<Mutex<SplitSink<WebSocket, Message>>>>,
 }
 
 impl Inner {
-    pub fn create(&mut self, data: &[u8]) -> Option<(u16, Arc<Game>)> {
+    pub fn create(&mut self, data: &[u8]) -> Option<(GameId, Arc<Game>)> {
         let config = Config::from_raw(data)?;
         if !config.is_valid() {
             return None;

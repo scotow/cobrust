@@ -3,12 +3,13 @@ use crate::game::Game;
 use warp::filters::ws::Message;
 use crate::packet;
 use crate::misc::ToData;
+use crate::lobby::GameId;
 
 pub enum Packet<'a> {
-    AddGames(Vec<(&'a u16, &'a Arc<Game>)>),
-    RemoveGame(u16),
-    PlayerCount(u16, u8),
-    GameCreated(u16),
+    AddGames(Vec<(&'a GameId, &'a Arc<Game>)>),
+    RemoveGame(GameId),
+    PlayerCount(GameId, u8),
+    GameCreated(GameId),
 }
 
 impl<'a> Packet<'a> {

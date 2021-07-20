@@ -1,9 +1,10 @@
-use crate::game::player::Player;
+use crate::game::player::{Player, PlayerId};
 use crate::misc::ToData;
 use byteorder::{WriteBytesExt, BE};
+use std::mem::size_of;
 
 pub trait Perk: ToData {
-    fn consume(&self, id: u16, player: &mut Player);
+    fn consume(&self, id: PlayerId, player: &mut Player);
 
     fn make_spawn_food(&self) -> bool {
         false
@@ -13,7 +14,7 @@ pub trait Perk: ToData {
 pub struct Generator {
     food_strength: u16,
     count: u8,
-    previous_consumer: Option<u16>,
+    previous_consumer: Option<PlayerId>,
     reserved_food: bool,
 }
 
@@ -27,7 +28,7 @@ impl Generator {
         }
     }
 
-    pub fn next(&mut self, consumer: u16) -> Vec<Box<dyn Perk + Sync + Send>> {
+    pub fn next(&mut self, consumer: PlayerId) -> Vec<Box<dyn Perk + Sync + Send>> {
         self.count += 1;
         let mut perks: Vec<Box<dyn Perk + Sync + Send>> = Vec::with_capacity(2);
         perks.push(Box::new(Food(self.food_strength)));
@@ -55,7 +56,7 @@ impl Generator {
 pub struct Food(pub u16);
 
 impl Perk for Food {
-    fn consume(&self, _id: u16, player: &mut Player) {
+    fn consume(&self, _id: PlayerId, player: &mut Player) {
         player.grow(self.0);
     }
 
@@ -72,11 +73,11 @@ impl ToData for Food {
 
 pub struct ReservedFood {
     pub strength: u16,
-    pub owner: u16,
+    pub owner: PlayerId,
 }
 
 impl Perk for ReservedFood {
-    fn consume(&self, id: u16, player: &mut Player) {
+    fn consume(&self, id: PlayerId, player: &mut Player) {
         if id == self.owner {
             player.grow(self.strength);
         }
@@ -85,7 +86,7 @@ impl Perk for ReservedFood {
 
 impl ToData for ReservedFood {
     fn push(&self, out: &mut Vec<u8>) {
-        out.reserve(3);
+        out.reserve(size_of::<u8>() + size_of::<u16>());
         out.push(1);
         out.write_u16::<BE>(self.owner).unwrap();
     }

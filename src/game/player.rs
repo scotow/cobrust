@@ -11,6 +11,8 @@ use rand::Rng;
 
 const START_SIZE: u16 = 9;
 
+pub(super) type PlayerId = u16;
+
 #[derive(Debug)]
 pub struct Player {
     pub body: VecDeque<Coord>,

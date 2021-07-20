@@ -1,5 +1,5 @@
 use crate::game::size::Size;
-use crate::game::player::Player;
+use crate::game::player::{Player, PlayerId};
 use warp::ws::Message;
 use std::sync::Arc;
 use tokio::sync::MutexGuard;
@@ -9,11 +9,11 @@ use crate::misc::ToData;
 use crate::game::perk::Perk;
 
 pub enum Packet<'a> {
-    Info(Size, &'a str, u16),
-    Snakes(Vec<(u16, MutexGuard<'a, Player>)>),
+    Info(Size, &'a str, PlayerId),
+    Snakes(Vec<(PlayerId, MutexGuard<'a, Player>)>),
     Perks(Vec<(Coord, Arc<Box<dyn Perk + Sync + Send>>)>),
-    PlayerJoined(u16, Coord, (u16, u16)),
-    PlayerLeft(u16),
+    PlayerJoined(PlayerId, Coord, (u16, u16)),
+    PlayerLeft(PlayerId),
     SnakeChanges(Vec<SnakeChange>),
 }
 
@@ -67,7 +67,7 @@ impl<'a> Packet<'a> {
 }
 
 pub enum SnakeChange {
-    Remove(u16),
-    Add(u16, Coord),
-    Die(u16, Coord),
+    Remove(PlayerId),
+    Add(PlayerId, Coord),
+    Die(PlayerId, Coord),
 }

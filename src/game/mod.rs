@@ -26,6 +26,7 @@ use packet::Packet;
 use crate::game::packet::SnakeChange;
 use crate::game::perk::{Perk, Generator};
 use crate::game::config::Config;
+use crate::game::player::PlayerId;
 
 pub struct Game {
     pub name: String,
@@ -38,7 +39,9 @@ pub struct Game {
 impl Game {
     pub fn new(config: Config) -> Self {
         let mut inner = Inner {
-            grid: vec![vec![Cell::Empty; config.size.width as usize]; config.size.height as usize],
+            grid: (0..config.size.height).map(|_y|
+                (0..config.size.width).map(|_x| Cell::Empty).collect()
+            ).collect(),
             players: HashMap::new(),
             perks: HashMap::new(),
             perk_generator: Generator::new(config.food_strength, config.reserved_food),
@@ -88,7 +91,7 @@ impl Game {
         inner.broadcast_message(Packet::PlayerJoined(id, head, color)).await;
         let player = Arc::new(Mutex::new(player));
         inner.players.insert(id, Arc::clone(&player));
-        inner.grid[head.y][head.x] = Cell::Occupied;
+        inner.grid[head.y][head.x] = Cell::Occupied(id);
 
         // Send snakes info.
         let snakes_message = Packet::Snakes(join_all(
@@ -165,25 +168,25 @@ impl Game {
         // Create new heads, handle collisions and apply perks.
         let collisions = walks.iter()
             .fold(HashMap::with_capacity(walks.len()), |mut acc, (_, _, (_, new))| {
-            *acc.entry(new).or_insert(0u16) += 1;
+            *acc.entry(new).or_insert(0u8) += 1;
             acc
         });
         for (id, player, (_removed, new)) in walks.iter() {
             match &inner.grid[new.y][new.x] {
                 Cell::Empty => {
                     if *collisions.get(new).unwrap() == 1 {
-                        inner.grid[new.y][new.x] = Cell::Occupied;
+                        inner.grid[new.y][new.x] = Cell::Occupied(*id);
                         changes.push(SnakeChange::Add(*id, *new));
                     } else {
                         need_respawn.push((*id, Arc::clone(player)));
                     }
                 },
-                Cell::Occupied => {
+                Cell::Occupied(_) => {
                     need_respawn.push((*id, Arc::clone(player)));
                 },
                 Cell::Perk(perk) => {
                     perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
-                    inner.grid[new.y][new.x] = Cell::Occupied;
+                    inner.grid[new.y][new.x] = Cell::Occupied(*id);
                     inner.perks.remove(new);
                     changes.push(SnakeChange::Add(*id, *new));
                 },
@@ -196,7 +199,7 @@ impl Game {
             player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
             let head = inner.safe_place(self.size);
             player.respawn(head).await;
-            inner.grid[head.y][head.x] = Cell::Occupied;
+            inner.grid[head.y][head.x] = Cell::Occupied(id);
             changes.push(SnakeChange::Die(id, head));
         }
         for (id, player, perk) in perk_consumed {
@@ -225,7 +228,7 @@ impl Game {
 
 struct Inner {
     grid: Vec<Vec<Cell>>,
-    players: HashMap<u16, Arc<Mutex<Player>>>,
+    players: HashMap<PlayerId, Arc<Mutex<Player>>>,
     perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
     perk_generator: Generator,
     last_leave: Instant,
