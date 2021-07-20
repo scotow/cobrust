@@ -71,7 +71,7 @@ impl Game {
                 drop(inner);
                 sleep(Duration::from_millis(500)).await;
             } else {
-                self.walk_snakes(&mut inner).await;
+                inner.walk_snakes(self.size).await;
                 drop(inner);
                 sleep(Duration::from_millis(1000 / self.speed as u64)).await;
             }
@@ -140,12 +140,26 @@ impl Game {
         // Player left the game from here.
     }
 
-    async fn walk_snakes(&self, inner: &mut Inner) {
+    pub async fn player_count(&self) -> usize {
+        self.inner.lock().await.players.len()
+    }
+}
+
+struct Inner {
+    grid: Vec<Vec<Cell>>,
+    players: HashMap<PlayerId, Arc<Mutex<Player>>>,
+    perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    perk_generator: Generator,
+    last_leave: Instant,
+}
+
+impl Inner {
+    async fn walk_snakes(&mut self, size: Size) {
         let walks = join_all(
-            inner.players.iter().map(|(&id, p)| {
+            self.players.iter().map(|(&id, p)| {
                 async move {
                     p.lock().await
-                        .walk(self.size).await
+                        .walk(size).await
                         .map(|cs| (id, Arc::clone(p), cs))
                 }
             })).await
@@ -161,7 +175,7 @@ impl Game {
         // Free all tails.
         for (id, _player, (removed, _new)) in walks.iter() {
             if let Some(removed) = removed {
-                inner.grid[removed.y][removed.x] = Cell::Empty;
+                self.grid[removed.y][removed.x] = Cell::Empty;
                 changes.push(SnakeChange::Remove(*id));
             }
         }
@@ -169,14 +183,14 @@ impl Game {
         // Create new heads, handle collisions and apply perks.
         let collisions = walks.iter()
             .fold(HashMap::with_capacity(walks.len()), |mut acc, (_, _, (_, new))| {
-            *acc.entry(new).or_insert(0u8) += 1;
-            acc
-        });
+                *acc.entry(new).or_insert(0u8) += 1;
+                acc
+            });
         for (id, player, (_removed, new)) in walks.iter() {
-            match &inner.grid[new.y][new.x] {
+            match &self.grid[new.y][new.x] {
                 Cell::Empty => {
                     if *collisions.get(new).unwrap() == 1 {
-                        inner.grid[new.y][new.x] = Cell::Occupied(*id);
+                        self.grid[new.y][new.x] = Cell::Occupied(*id);
                         changes.push(SnakeChange::Add(*id, *new));
                     } else {
                         need_respawn.push((*id, Arc::clone(player)));
@@ -187,8 +201,8 @@ impl Game {
                 },
                 Cell::Perk(perk) => {
                     perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
-                    inner.grid[new.y][new.x] = Cell::Occupied(*id);
-                    inner.perks.remove(new);
+                    self.grid[new.y][new.x] = Cell::Occupied(*id);
+                    self.perks.remove(new);
                     changes.push(SnakeChange::Add(*id, *new));
                 },
             }
@@ -197,45 +211,31 @@ impl Game {
         // Process respawns and generate perks.
         for (id, player) in need_respawn {
             let mut player = player.lock().await;
-            player.body.iter().skip(1).for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
-            let head = inner.safe_place(self.size);
+            player.body.iter().skip(1).for_each(|&c| self.grid[c.y][c.x] = Cell::Empty);
+            let head = self.safe_place(size);
             player.respawn(head).await;
-            inner.grid[head.y][head.x] = Cell::Occupied(id);
+            self.grid[head.y][head.x] = Cell::Occupied(id);
             changes.push(SnakeChange::Die(id, head));
         }
         for (id, player, perk) in perk_consumed {
             perk.consume(id, &mut *player.lock().await);
             if perk.make_spawn_food() {
-                for perk in inner.perk_generator.next(id) {
+                for perk in self.perk_generator.next(id) {
                     let perk = Arc::new(perk);
-                    let coord = inner.add_perk(self.size, Arc::clone(&perk));
+                    let coord = self.add_perk(size, Arc::clone(&perk));
                     new_perks.push((coord, perk));
                 }
             }
         }
 
         if !changes.is_empty() {
-            inner.broadcast_message(Packet::SnakeChanges(changes)).await;
+            self.broadcast_message(Packet::SnakeChanges(changes)).await;
         }
         if !new_perks.is_empty() {
-            inner.broadcast_message(Packet::Perks(new_perks)).await;
+            self.broadcast_message(Packet::Perks(new_perks)).await;
         }
     }
 
-    pub async fn player_count(&self) -> usize {
-        self.inner.lock().await.players.len()
-    }
-}
-
-struct Inner {
-    grid: Vec<Vec<Cell>>,
-    players: HashMap<PlayerId, Arc<Mutex<Player>>>,
-    perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
-    perk_generator: Generator,
-    last_leave: Instant,
-}
-
-impl Inner {
     fn safe_place(&self, size: Size) -> Coord {
         loop {
             let coord = Coord::random(size);
