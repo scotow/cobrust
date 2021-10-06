@@ -19,12 +19,13 @@ class Lobby {
                 const foods = Number(document.getElementById('create-foods').value);
                 const foodStrength = Number(document.getElementById('create-food-strength').value);
                 const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
+                const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1);
+                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1 + 1);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
@@ -34,6 +35,7 @@ class Lobby {
                 data.writeUnsignedShort(foods);
                 data.writeUnsignedShort(foodStrength);
                 data.writeUnsignedByte(reservedFood);
+                data.writeUnsignedByte(reverser);
                 this.socket.send(data.buffer);
             });
         });
@@ -352,6 +354,14 @@ class Game {
                     this.fillMode(player.color[0]);
                     this.drawCell(head);
                 } break;
+                case 3: {
+                    const player = this.players[data.readUnsignedShort()];
+                    this.fillMode(player.color[1]);
+                    this.drawCell(player.body[0]);
+                    player.body = player.body.reverse();
+                    this.fillMode(player.color[0]);
+                    this.drawCell(player.body[0]);
+                } break;
             }
         }
     }
@@ -391,10 +401,13 @@ class Game {
     drawPerk(perk) {
         switch (perk.id) {
             case 0:
-                this.context.fillStyle = '#00ff00';
+                this.context.fillStyle = '#2fbf71';
                 break;
             case 1:
                 this.context.fillStyle = perk.owner === this.selfId ? '#1e90ff' : '#0c3b66';
+                break;
+            case 2:
+                this.context.fillStyle = '#f0c808';
                 break;
             default: return;
         }

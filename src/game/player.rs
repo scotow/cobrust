@@ -102,4 +102,15 @@ impl Player {
         direction.queue.clear();
         self.growth = START_SIZE;
     }
+
+    pub async fn reverse(&mut self) {
+        self.body.make_contiguous().reverse();
+        let mut direction = self.direction.lock().await;
+        if let (Some(&head), Some(&body)) = (self.body.get(0), self.body.get(1)) {
+            direction.current = Some(Dir::from((head, body)));
+        } else {
+            direction.current = None;
+        }
+        direction.queue.clear();
+    }
 }

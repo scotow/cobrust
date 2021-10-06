@@ -11,6 +11,7 @@ pub struct Config {
     pub foods: u16,
     pub food_strength: u16,
     pub reserved_food: bool,
+    pub reverser: bool,
 }
 
 impl Config {
@@ -29,8 +30,9 @@ impl Config {
         let foods = data.read_u16::<BE>().ok()?;
         let food_strength = data.read_u16::<BE>().ok()?;
         let reserved_food = data.read_u8().ok()? > 0;
+        let reverser = data.read_u8().ok()? > 0;
 
-        Some(Self { name, size, speed, foods, food_strength, reserved_food })
+        Some(Self { name, size, speed, foods, food_strength, reserved_food, reverser })
     }
 
     pub fn is_valid(&self) -> bool {

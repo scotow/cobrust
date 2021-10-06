@@ -45,7 +45,7 @@ impl Game {
             ).collect(),
             players: HashMap::new(),
             perks: HashMap::new(),
-            perk_generator: Generator::new(config.food_strength, config.reserved_food),
+            perk_generator: Generator::new(config.food_strength, config.reserved_food, config.reverser),
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
@@ -218,7 +218,9 @@ impl Inner {
             changes.push(SnakeChange::Die(id, head));
         }
         for (id, player, perk) in perk_consumed {
-            perk.consume(id, &mut *player.lock().await);
+            if let Some(additional_change) = perk.consume(id, &mut *player.lock().await).await {
+                changes.push(additional_change);
+            }
             if perk.make_spawn_food() {
                 for perk in self.perk_generator.next(id) {
                     let perk = Arc::new(perk);

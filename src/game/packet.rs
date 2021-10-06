@@ -59,6 +59,7 @@ impl<'a> Packet<'a> {
                         Remove(id) => packet![packet; 0u8, id],
                         Add(id, coord) => packet![packet; 1u8, id, coord.x as u16, coord.y as u16],
                         Die(id, coord) => packet![packet; 2u8, id, coord.x as u16, coord.y as u16],
+                        Reverse(id) => packet![packet; 3u8, id],
                     }
                 }
                 packet
@@ -72,4 +73,5 @@ pub enum SnakeChange {
     Remove(PlayerId),
     Add(PlayerId, Coord),
     Die(PlayerId, Coord),
+    Reverse(PlayerId),
 }

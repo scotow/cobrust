@@ -1,12 +1,15 @@
 use std::mem::size_of;
 
+use async_trait::async_trait;
 use byteorder::{BE, WriteBytesExt};
 
+use crate::game::packet::SnakeChange;
 use crate::game::player::{Player, PlayerId};
 use crate::misc::ToData;
 
+#[async_trait]
 pub trait Perk: ToData {
-    fn consume(&self, id: PlayerId, player: &mut Player);
+    async fn consume(&self, id: PlayerId, player: &mut Player) -> Option<SnakeChange>;
 
     fn make_spawn_food(&self) -> bool {
         false
@@ -18,21 +21,23 @@ pub struct Generator {
     count: u8,
     previous_consumer: Option<PlayerId>,
     reserved_food: bool,
+    reverser: bool,
 }
 
 impl Generator {
-    pub fn new(food_strength: u16, reserved_food: bool) -> Self {
+    pub fn new(food_strength: u16, reserved_food: bool, reverser: bool) -> Self {
         Self {
             food_strength,
             count: 0,
             previous_consumer: None,
             reserved_food,
+            reverser,
         }
     }
 
     pub fn next(&mut self, consumer: PlayerId) -> Vec<Box<dyn Perk + Sync + Send>> {
-        self.count += 1;
-        let mut perks: Vec<Box<dyn Perk + Sync + Send>> = Vec::with_capacity(2);
+        self.count = self.count % u8::MAX + 1;
+        let mut perks: Vec<Box<dyn Perk + Sync + Send>> = Vec::with_capacity(3);
         perks.push(Box::new(Food(self.food_strength)));
 
         if self.reserved_food {
@@ -46,6 +51,9 @@ impl Generator {
                 self.previous_consumer = Some(consumer);
             }
         }
+        if self.reverser && self.count % 8 == 0 {
+            perks.push(Box::new(Reverser));
+        }
 
         perks
     }
@@ -57,9 +65,11 @@ impl Generator {
 
 pub struct Food(pub u16);
 
+#[async_trait]
 impl Perk for Food {
-    fn consume(&self, _id: PlayerId, player: &mut Player) {
+    async fn consume(&self, _id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
         player.grow(self.0);
+        None
     }
 
     fn make_spawn_food(&self) -> bool {
@@ -78,11 +88,13 @@ pub struct ReservedFood {
     pub owner: PlayerId,
 }
 
+#[async_trait]
 impl Perk for ReservedFood {
-    fn consume(&self, id: PlayerId, player: &mut Player) {
+    async fn consume(&self, id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
         if id == self.owner {
             player.grow(self.strength);
         }
+        None
     }
 }
 
@@ -94,3 +106,18 @@ impl ToData for ReservedFood {
     }
 }
 
+pub struct Reverser;
+
+#[async_trait]
+impl Perk for Reverser {
+    async fn consume(&self, id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
+        player.reverse().await;
+        Some(SnakeChange::Reverse(id))
+    }
+}
+
+impl ToData for Reverser {
+    fn push(&self, out: &mut Vec<u8>) {
+        out.push(2);
+    }
+}

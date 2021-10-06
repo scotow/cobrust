@@ -366,7 +366,7 @@ body.playing #game {
 }
 
 #lobby > .rules > .content > .section > .perk > .color.food {
-    background: #00ff00;
+    background: #2fbf71;
 }
 
 #lobby > .rules > .content > .section > .perk > .color.reserved-food {
@@ -385,6 +385,10 @@ body.playing #game {
     border-radius: 10.5px 10.5px 0 0;
     background: #0c3b66;
     transform: translate(-50%, 0);
+}
+
+#lobby > .rules > .content > .section > .perk > .color.reverser {
+    background: #f0c808;
 }
 
 #lobby > .rules > .content > .section > .perk > .info {

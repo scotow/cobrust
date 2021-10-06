@@ -1,6 +1,6 @@
 [package]
 name = "cobrust"
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Scotow <contact@scotow.com>"]
 edition = "2018"
 
@@ -11,3 +11,4 @@ tokio = { version = "1.6", features = ["full"] }
 env_logger = "0.8"
 rand = "0.8"
 byteorder = "1.4"
+async-trait = "0.1"
