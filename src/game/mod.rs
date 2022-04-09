@@ -45,7 +45,7 @@ impl Game {
             ).collect(),
             players: HashMap::new(),
             perks: HashMap::new(),
-            perk_generator: Generator::new(config.food_strength, config.reserved_food, config.reverser),
+            perk_generator: Generator::new(&config),
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
@@ -223,7 +223,7 @@ impl Inner {
             }
             if perk.make_spawn_food() {
                 for perk in self.perk_generator.next(id) {
-                    let perk = Arc::new(perk);
+                    // let perk = Arc::new(perk);
                     let coord = self.add_perk(size, Arc::clone(&perk));
                     new_perks.push((coord, perk));
                 }

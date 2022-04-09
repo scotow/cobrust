@@ -12,6 +12,7 @@ pub struct Config {
     pub food_strength: u16,
     pub reserved_food: bool,
     pub reverser: bool,
+    pub teleporter: bool,
 }
 
 impl Config {
@@ -32,7 +33,7 @@ impl Config {
         let reserved_food = data.read_u8().ok()? > 0;
         let reverser = data.read_u8().ok()? > 0;
 
-        Some(Self { name, size, speed, foods, food_strength, reserved_food, reverser })
+        Some(Self { name, size, speed, foods, food_strength, reserved_food, reverser, teleporter: true })
     }
 
     pub fn is_valid(&self) -> bool {

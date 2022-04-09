@@ -6,6 +6,9 @@ use byteorder::{BE, WriteBytesExt};
 use crate::game::packet::SnakeChange;
 use crate::game::player::{Player, PlayerId};
 use crate::misc::ToData;
+use crate::game::coordinate::Coord;
+use crate::game::config::Config;
+use std::sync::{Arc, Weak};
 
 #[async_trait]
 pub trait Perk: ToData {
@@ -14,6 +17,8 @@ pub trait Perk: ToData {
     fn make_spawn_food(&self) -> bool {
         false
     }
+
+    fn was_placed(&self, coord: Coord) {}
 }
 
 pub struct Generator {
@@ -22,37 +27,48 @@ pub struct Generator {
     previous_consumer: Option<PlayerId>,
     reserved_food: bool,
     reverser: bool,
+    teleporter: bool,
 }
 
 impl Generator {
-    pub fn new(food_strength: u16, reserved_food: bool, reverser: bool) -> Self {
+    pub fn new(config: &Config) -> Self {
         Self {
-            food_strength,
+            food_strength: config.food_strength,
             count: 0,
             previous_consumer: None,
-            reserved_food,
-            reverser,
+            reserved_food: config.reserved_food,
+            reverser: config.reverser,
+            teleporter: config.teleporter,
         }
     }
 
-    pub fn next(&mut self, consumer: PlayerId) -> Vec<Box<dyn Perk + Sync + Send>> {
+    pub fn next(&mut self, consumer: PlayerId) -> Vec<Arc<Box<dyn Perk + Sync + Send>>> {
         self.count = self.count % u8::MAX + 1;
-        let mut perks: Vec<Box<dyn Perk + Sync + Send>> = Vec::with_capacity(3);
-        perks.push(Box::new(Food(self.food_strength)));
+        let mut perks: Vec<Arc<Box<dyn Perk + Sync + Send>>> = Vec::with_capacity(3);
+        perks.push(Arc::new(Box::new(Food(self.food_strength))));
 
         if self.reserved_food {
             if self.previous_consumer == Some(consumer) {
-                perks.push(Box::new(ReservedFood {
+                perks.push(Arc::new(Box::new(ReservedFood {
                     strength: self.food_strength * 2,
                     owner: consumer,
-                }));
+                })));
                 self.previous_consumer = None;
             } else {
                 self.previous_consumer = Some(consumer);
             }
         }
         if self.reverser && self.count % 8 == 0 {
-            perks.push(Box::new(Reverser));
+            perks.push(Arc::new(Box::new(Reverser)));
+        }
+        if self.teleporter && self.count % 1 == 0 {
+            let t1 = Arc::new(Box::new(Teleporter(None));
+            let t2 = Teleporter(None);
+            //
+            //
+            // let t1 = Arc::new(Box::new(Teleporter(Weak::new())));
+            // let t2 = Arc::new(Box::new(Teleporter(Arc::downgrade(&t1))));
+            // let
         }
 
         perks
@@ -121,3 +137,5 @@ impl ToData for Reverser {
         out.push(2);
     }
 }
+
+pub struct Teleporter(Option<Weak<Box<Teleporter>>>);
