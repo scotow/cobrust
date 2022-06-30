@@ -223,8 +223,8 @@ impl Inner {
             }
             if perk.make_spawn_food() {
                 for perk in self.perk_generator.next(id) {
-                    // let perk = Arc::new(perk);
                     let coord = self.add_perk(size, Arc::clone(&perk));
+                    perk.was_placed(coord).await;
                     new_perks.push((coord, perk));
                 }
             }

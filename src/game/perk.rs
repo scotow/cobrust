@@ -9,6 +9,7 @@ use crate::misc::ToData;
 use crate::game::coordinate::Coord;
 use crate::game::config::Config;
 use std::sync::{Arc, Weak};
+use tokio::sync::Mutex;
 
 #[async_trait]
 pub trait Perk: ToData {
@@ -18,7 +19,7 @@ pub trait Perk: ToData {
         false
     }
 
-    fn was_placed(&self, coord: Coord) {}
+    async fn was_placed(&self, coord: Coord) {}
 }
 
 pub struct Generator {
@@ -61,15 +62,15 @@ impl Generator {
         if self.reverser && self.count % 8 == 0 {
             perks.push(Arc::new(Box::new(Reverser)));
         }
-        if self.teleporter && self.count % 1 == 0 {
-            let t1 = Arc::new(Box::new(Teleporter(None));
-            let t2 = Teleporter(None);
-            //
-            //
-            // let t1 = Arc::new(Box::new(Teleporter(Weak::new())));
-            // let t2 = Arc::new(Box::new(Teleporter(Arc::downgrade(&t1))));
-            // let
-        }
+        // if self.teleporter && self.count % 1 == 0 {
+        //     let t1 = Arc::new(Box::new(Teleporter(None));
+        //     let t2 = Teleporter(None);
+        //     //
+        //     //
+        //     // let t1 = Arc::new(Box::new(Teleporter(Weak::new())));
+        //     // let t2 = Arc::new(Box::new(Teleporter(Arc::downgrade(&t1))));
+        //     // let
+        // }
 
         perks
     }
@@ -138,4 +139,31 @@ impl ToData for Reverser {
     }
 }
 
-pub struct Teleporter(Option<Weak<Box<Teleporter>>>);
+// Idea: pass the position generator to the perk generator, so it can ask as many coord it needs.
+pub struct Teleporter {
+    other: Mutex<Option<Weak<Mutex<Teleporter>>>>,
+    other_coord: Mutex<Option<Coord>>,
+}
+
+#[async_trait]
+impl Perk for Teleporter {
+    async fn consume(&self, _id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
+        player.grow(5);
+        None
+    }
+
+    async fn was_placed(&self, coord: Coord) {
+        if let Some(other) = &*self.other.lock().await {
+            if let Some(other) = other.upgrade() {
+                *other.lock().await.other_coord = coord;
+                *other.lock
+            }
+        }
+    }
+}
+
+impl ToData for Teleporter {
+    fn push(&self, out: &mut Vec<u8>) {
+        out.push(3);
+    }
+}
