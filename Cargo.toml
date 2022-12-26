@@ -1,14 +1,14 @@
 [package]
 name = "cobrust"
-version = "0.3.5"
+version = "0.3.6"
 authors = ["Scotow <contact@scotow.com>"]
 edition = "2018"
 
 [dependencies]
-warp = "0.3"
-futures = "0.3"
-tokio = { version = "1.6", features = ["full"] }
-env_logger = "0.8"
-rand = "0.8"
-byteorder = "1.4"
-async-trait = "0.1"
+warp = "0.3.3"
+futures = "0.3.25"
+tokio = { version = "1.23.0", features = ["full"] }
+env_logger = "0.10.0"
+rand = "0.8.5"
+byteorder = "1.4.3"
+async-trait = "0.1.60"
