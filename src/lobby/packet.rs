@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use warp::filters::ws::Message;
 
-use crate::game::Game;
-use crate::lobby::GameId;
-use crate::misc::ToData;
-use crate::packet;
+use crate::{game::Game, lobby::GameId, misc::ToData, packet};
 
 pub enum Packet<'a> {
     AddGames(Vec<(&'a GameId, &'a Arc<Game>)>),
@@ -30,16 +27,16 @@ impl<'a> Packet<'a> {
                     ];
                 }
                 packet
-            },
+            }
             RemoveGame(id) => {
                 packet![1u8, id]
-            },
+            }
             PlayerCount(id, count) => {
                 packet![2u8, id, count]
-            },
+            }
             GameCreated(id) => {
                 packet![3u8, id]
-            },
+            }
         };
         Message::binary(payload)
     }

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use warp::Filter;
-use warp::ws::WebSocket;
+use warp::{ws::WebSocket, Filter};
 
 use crate::lobby::Lobby;
 
@@ -28,11 +27,9 @@ async fn main() {
             websocket.on_upgrade(move |socket| join_game(lobby, id, socket))
         });
 
-    warp::serve(
-        warp::fs::dir("src/public")
-            .or(lobby_route)
-            .or(game_route)
-    ).run(([0, 0, 0, 0], 3030)).await;
+    warp::serve(warp::fs::dir("src/public").or(lobby_route).or(game_route))
+        .run(([0, 0, 0, 0], 8080))
+        .await;
 }
 
 async fn join_lobby(lobby: Arc<Lobby>, socket: WebSocket) {

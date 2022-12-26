@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read};
 
-use byteorder::{BE, ReadBytesExt};
+use byteorder::{ReadBytesExt, BE};
 
 use crate::game::size::Size;
 
@@ -33,15 +33,24 @@ impl Config {
         let reserved_food = data.read_u8().ok()? > 0;
         let reverser = data.read_u8().ok()? > 0;
 
-        Some(Self { name, size, speed, foods, food_strength, reserved_food, reverser, teleporter: true })
+        Some(Self {
+            name,
+            size,
+            speed,
+            foods,
+            food_strength,
+            reserved_food,
+            reverser,
+            teleporter: true,
+        })
     }
 
     pub fn is_valid(&self) -> bool {
-        (1..=32).contains(&self.name.len()) &&
-            (16..=255).contains(&self.size.width) &&
-            (16..=255).contains(&self.size.height) &&
-            (1..=50).contains(&self.speed) &&
-            (1..=32).contains(&self.foods) &&
-            (0..=1024).contains(&self.food_strength)
+        (1..=32).contains(&self.name.len())
+            && (16..=255).contains(&self.size.width)
+            && (16..=255).contains(&self.size.height)
+            && (1..=50).contains(&self.speed)
+            && (1..=32).contains(&self.foods)
+            && (0..=1024).contains(&self.food_strength)
     }
 }

@@ -2,8 +2,7 @@ use std::ops::Add;
 
 use rand::Rng;
 
-use crate::game::direction::Dir;
-use crate::game::size::Size;
+use crate::game::{direction::Dir, size::Size};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Coord {
@@ -41,7 +40,7 @@ impl Add<(Dir, Size)> for Coord {
             },
             Right => Coord {
                 x: (self.x as isize + 1).rem_euclid(rhs.1.width as isize) as usize,
-                y: self.y
+                y: self.y,
             },
         }
     }

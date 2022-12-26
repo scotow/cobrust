@@ -1,24 +1,24 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-
-use futures::future::join_all;
-use futures::stream::SplitStream;
-use futures::StreamExt;
-use tokio::sync::Mutex;
-use tokio::time::sleep;
-use warp::ws::WebSocket;
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use cell::Cell;
 use coordinate::Coord;
+use futures::{future::join_all, stream::SplitStream, StreamExt};
 use packet::Packet;
 use player::Player;
 use size::Size;
+use tokio::{sync::Mutex, time::sleep};
+use warp::ws::WebSocket;
 
-use crate::game::config::Config;
-use crate::game::packet::SnakeChange;
-use crate::game::perk::{Generator, Perk};
-use crate::game::player::PlayerId;
+use crate::game::{
+    config::Config,
+    packet::SnakeChange,
+    perk::{Generator, Perk},
+    player::PlayerId,
+};
 
 pub mod cell;
 pub mod config;
@@ -40,16 +40,19 @@ pub struct Game {
 impl Game {
     pub fn new(config: Config) -> Self {
         let mut inner = Inner {
-            grid: (0..config.size.height).map(|_y|
-                (0..config.size.width).map(|_x| Cell::Empty).collect()
-            ).collect(),
+            grid: (0..config.size.height)
+                .map(|_y| (0..config.size.width).map(|_x| Cell::Empty).collect())
+                .collect(),
             players: HashMap::new(),
             perks: HashMap::new(),
             perk_generator: Generator::new(&config),
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
-            inner.add_perk(config.size, Arc::new(Box::new(inner.perk_generator.fresh_food())));
+            inner.add_perk(
+                config.size,
+                Arc::new(Box::new(inner.perk_generator.fresh_food())),
+            );
         }
 
         Self {
@@ -86,24 +89,38 @@ impl Game {
         let id = rand::random();
         let mut player = Player::new(head, tx);
         let color = player.color;
-        let _ = player.send(Packet::Info(self.size, &self.name, id).message()).await;
+        let _ = player
+            .send(Packet::Info(self.size, &self.name, id).message())
+            .await;
 
         // Add player to game.
-        inner.broadcast_message(Packet::PlayerJoined(id, head, color)).await;
+        inner
+            .broadcast_message(Packet::PlayerJoined(id, head, color))
+            .await;
         let player = Arc::new(Mutex::new(player));
         inner.players.insert(id, Arc::clone(&player));
         inner.grid[head.y][head.x] = Cell::Occupied(id);
 
         // Send snakes info.
-        let snakes_message = Packet::Snakes(join_all(
-            inner.players.iter().map(|(&id, p)| {
-                async move { (id, p.lock().await) }
-            })).await).message();
+        let snakes_message = Packet::Snakes(
+            join_all(
+                inner
+                    .players
+                    .iter()
+                    .map(|(&id, p)| async move { (id, p.lock().await) }),
+            )
+            .await,
+        )
+        .message();
         let mut player_lock = player.lock().await;
         player_lock.send(snakes_message).await;
 
         // Send perks info.
-        let perks = inner.perks.iter().map(|(c, p)| (*c, Arc::clone(p))).collect::<Vec<_>>();
+        let perks = inner
+            .perks
+            .iter()
+            .map(|(c, p)| (*c, Arc::clone(p)))
+            .collect::<Vec<_>>();
         player_lock.send(Packet::Perks(perks).message()).await;
         drop(player_lock);
         drop(inner);
@@ -115,7 +132,11 @@ impl Game {
         // Remove and clean player.
         let mut inner = self.inner.lock().await;
         let player = inner.players.remove(&id).unwrap();
-        player.lock().await.body.iter()
+        player
+            .lock()
+            .await
+            .body
+            .iter()
             .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
         inner.last_leave = Instant::now();
         inner.broadcast_message(Packet::PlayerLeft(id)).await;
@@ -136,7 +157,7 @@ impl Game {
                 0 => player.lock().await.process(&data[1..]).await,
                 _ => break,
             }
-        };
+        }
         // Player left the game from here.
     }
 
@@ -155,17 +176,17 @@ struct Inner {
 
 impl Inner {
     async fn walk_snakes(&mut self, size: Size) {
-        let walks = join_all(
-            self.players.iter().map(|(&id, p)| {
-                async move {
-                    p.lock().await
-                        .walk(size).await
-                        .map(|cs| (id, Arc::clone(p), cs))
-                }
-            })).await
-            .into_iter()
-            .filter_map(|m| m)
-            .collect::<Vec<_>>();
+        let walks = join_all(self.players.iter().map(|(&id, p)| async move {
+            p.lock()
+                .await
+                .walk(size)
+                .await
+                .map(|cs| (id, Arc::clone(p), cs))
+        }))
+        .await
+        .into_iter()
+        .filter_map(|m| m)
+        .collect::<Vec<_>>();
 
         let mut need_respawn = Vec::new();
         let mut perk_consumed = Vec::new();
@@ -181,11 +202,13 @@ impl Inner {
         }
 
         // Create new heads, handle collisions and apply perks.
-        let collisions = walks.iter()
-            .fold(HashMap::with_capacity(walks.len()), |mut acc, (_, _, (_, new))| {
+        let collisions = walks.iter().fold(
+            HashMap::with_capacity(walks.len()),
+            |mut acc, (_, _, (_, new))| {
                 *acc.entry(new).or_insert(0u8) += 1;
                 acc
-            });
+            },
+        );
         for (id, player, (_removed, new)) in walks.iter() {
             match &self.grid[new.y][new.x] {
                 Cell::Empty => {
@@ -195,23 +218,27 @@ impl Inner {
                     } else {
                         need_respawn.push((*id, Arc::clone(player)));
                     }
-                },
+                }
                 Cell::Occupied(_) => {
                     need_respawn.push((*id, Arc::clone(player)));
-                },
+                }
                 Cell::Perk(perk) => {
                     perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
                     self.grid[new.y][new.x] = Cell::Occupied(*id);
                     self.perks.remove(new);
                     changes.push(SnakeChange::Add(*id, *new));
-                },
+                }
             }
         }
 
         // Process respawns and generate perks.
         for (id, player) in need_respawn {
             let mut player = player.lock().await;
-            player.body.iter().skip(1).for_each(|&c| self.grid[c.y][c.x] = Cell::Empty);
+            player
+                .body
+                .iter()
+                .skip(1)
+                .for_each(|&c| self.grid[c.y][c.x] = Cell::Empty);
             let head = self.safe_place(size);
             player.respawn(head).await;
             self.grid[head.y][head.x] = Cell::Occupied(id);
@@ -224,7 +251,7 @@ impl Inner {
             if perk.make_spawn_food() {
                 for perk in self.perk_generator.next(id) {
                     let coord = self.add_perk(size, Arc::clone(&perk));
-                    perk.was_placed(coord).await;
+                    // perk.was_placed(coord).await;
                     new_perks.push((coord, perk));
                 }
             }
@@ -259,13 +286,12 @@ impl Inner {
             return;
         }
         let message = packet.message();
-        join_all(self.players.values()
-            .map(|p| {
-                let message = message.clone();
-                async move {
-                    p.lock().await.send(message).await;
-                }
-            })
-        ).await;
+        join_all(self.players.values().map(|p| {
+            let message = message.clone();
+            async move {
+                p.lock().await.send(message).await;
+            }
+        }))
+        .await;
     }
 }

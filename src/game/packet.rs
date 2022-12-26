@@ -3,12 +3,16 @@ use std::sync::Arc;
 use tokio::sync::MutexGuard;
 use warp::ws::Message;
 
-use crate::game::coordinate::Coord;
-use crate::game::perk::Perk;
-use crate::game::player::{Player, PlayerId};
-use crate::game::size::Size;
-use crate::misc::ToData;
-use crate::packet;
+use crate::{
+    game::{
+        coordinate::Coord,
+        perk::Perk,
+        player::{Player, PlayerId},
+        size::Size,
+    },
+    misc::ToData,
+    packet,
+};
 
 pub enum Packet<'a> {
     Info(Size, &'a str, PlayerId),
@@ -24,7 +28,14 @@ impl<'a> Packet<'a> {
         use Packet::*;
         let payload = match self {
             Info(size, name, self_id) => {
-                packet![0u8, size.width as u16, size.height as u16, name.as_bytes().len() as u8, name.as_bytes(), self_id]
+                packet![
+                    0u8,
+                    size.width as u16,
+                    size.height as u16,
+                    name.as_bytes().len() as u8,
+                    name.as_bytes(),
+                    self_id
+                ]
             }
             Snakes(players) => {
                 let mut packet = Vec::with_capacity(128);
@@ -36,7 +47,7 @@ impl<'a> Packet<'a> {
                     }
                 }
                 packet
-            },
+            }
             Perks(perks) => {
                 let mut packet = Vec::with_capacity(perks.len() * 4);
                 packet![packet; 2u8];
@@ -44,10 +55,10 @@ impl<'a> Packet<'a> {
                     packet![packet; coord.x as u16, coord.y as u16, perk];
                 }
                 packet
-            },
+            }
             PlayerJoined(id, head, color) => {
                 packet![3u8, id, color.0, color.1, head.x as u16, head.y as u16]
-            },
+            }
             PlayerLeft(id) => {
                 packet![4u8, id]
             }
@@ -63,7 +74,7 @@ impl<'a> Packet<'a> {
                     }
                 }
                 packet
-            },
+            }
         };
         Message::binary(payload)
     }

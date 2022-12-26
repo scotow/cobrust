@@ -1,15 +1,11 @@
-use std::collections::VecDeque;
-use std::convert::TryFrom;
+use std::{collections::VecDeque, convert::TryFrom};
 
-use futures::SinkExt;
-use futures::stream::SplitSink;
+use futures::{stream::SplitSink, SinkExt};
 use rand::Rng;
 use tokio::sync::Mutex;
 use warp::ws::{Message, WebSocket};
 
-use crate::game::coordinate::Coord;
-use crate::game::direction::Dir;
-use crate::game::size::Size;
+use crate::game::{coordinate::Coord, direction::Dir, size::Size};
 
 const START_SIZE: u16 = 9;
 

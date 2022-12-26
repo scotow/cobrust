@@ -1,17 +1,11 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
-use futures::{SinkExt, StreamExt};
-use futures::future::join_all;
-use futures::stream::SplitSink;
-use tokio::sync::Mutex;
-use tokio::task;
+use futures::{future::join_all, stream::SplitSink, SinkExt, StreamExt};
+use packet::Packet;
+use tokio::{sync::Mutex, task};
 use warp::ws::{Message, WebSocket};
 
-use packet::Packet;
-
-use crate::game::config::Config;
-use crate::game::Game;
+use crate::game::{config::Config, Game};
 
 pub mod packet;
 
@@ -28,7 +22,7 @@ impl Lobby {
             inner: Arc::new(Mutex::new(Inner {
                 games: HashMap::new(),
                 users: HashMap::new(),
-            }))
+            })),
         }
     }
 
@@ -37,7 +31,9 @@ impl Lobby {
         let (mut tx, mut rx) = socket.split();
 
         let mut inner = self.inner.lock().await;
-        let games_message = Packet::AddGames(inner.games.iter().collect()).message().await;
+        let games_message = Packet::AddGames(inner.games.iter().collect())
+            .message()
+            .await;
         tx.send(games_message).await.unwrap();
 
         let tx = Arc::new(Mutex::new(tx));
@@ -62,10 +58,14 @@ impl Lobby {
                         None => continue,
                     };
 
-                    tx.lock().await.send(Packet::GameCreated(id).message().await).await.unwrap();
-                    inner.broadcast_message(
-                        Packet::AddGames(vec![(&id, &game)]).message().await
-                    ).await;
+                    tx.lock()
+                        .await
+                        .send(Packet::GameCreated(id).message().await)
+                        .await
+                        .unwrap();
+                    inner
+                        .broadcast_message(Packet::AddGames(vec![(&id, &game)]).message().await)
+                        .await;
 
                     let inner_ref = Arc::clone(&self.inner);
                     task::spawn(async move {
@@ -73,10 +73,12 @@ impl Lobby {
                         // Game is over from here.
 
                         let mut inner = inner_ref.lock().await;
-                        inner.broadcast_message(Packet::RemoveGame(id).message().await).await;
+                        inner
+                            .broadcast_message(Packet::RemoveGame(id).message().await)
+                            .await;
                         inner.games.remove(&id);
                     });
-                },
+                }
                 _ => (),
             }
         }
@@ -86,15 +88,25 @@ impl Lobby {
     pub async fn play(&self, id: GameId, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
         let game = Arc::clone(inner.games.get(&id).unwrap());
-        inner.broadcast_message(
-            Packet::PlayerCount(id, (game.player_count().await + 1) as u8).message().await
-        ).await;
+        inner
+            .broadcast_message(
+                Packet::PlayerCount(id, (game.player_count().await + 1) as u8)
+                    .message()
+                    .await,
+            )
+            .await;
         drop(inner);
 
         game.play(socket).await;
-        self.inner.lock().await.broadcast_message(
-            Packet::PlayerCount(id, game.player_count().await as u8).message().await
-        ).await;
+        self.inner
+            .lock()
+            .await
+            .broadcast_message(
+                Packet::PlayerCount(id, game.player_count().await as u8)
+                    .message()
+                    .await,
+            )
+            .await;
     }
 }
 
@@ -118,13 +130,12 @@ impl Inner {
     }
 
     async fn broadcast_message(&mut self, message: Message) {
-        join_all(self.users.values_mut()
-            .map(|user| {
-                let message = message.clone();
-                async move {
-                    let _ = user.lock().await.send(message).await;
-                }
-            })
-        ).await;
+        join_all(self.users.values_mut().map(|user| {
+            let message = message.clone();
+            async move {
+                let _ = user.lock().await.send(message).await;
+            }
+        }))
+        .await;
     }
 }

@@ -1,15 +1,17 @@
-use std::mem::size_of;
+use std::{mem::size_of, sync::Arc};
 
 use async_trait::async_trait;
-use byteorder::{BE, WriteBytesExt};
+use byteorder::{WriteBytesExt, BE};
 
-use crate::game::packet::SnakeChange;
-use crate::game::player::{Player, PlayerId};
-use crate::misc::ToData;
-use crate::game::coordinate::Coord;
-use crate::game::config::Config;
-use std::sync::{Arc, Weak};
-use tokio::sync::Mutex;
+use crate::{
+    game::{
+        config::Config,
+        // coordinate::Coord,
+        packet::SnakeChange,
+        player::{Player, PlayerId},
+    },
+    misc::ToData,
+};
 
 #[async_trait]
 pub trait Perk: ToData {
@@ -19,7 +21,7 @@ pub trait Perk: ToData {
         false
     }
 
-    async fn was_placed(&self, coord: Coord) {}
+    // async fn was_placed(&self, coord: Coord) {}
 }
 
 pub struct Generator {
@@ -28,7 +30,7 @@ pub struct Generator {
     previous_consumer: Option<PlayerId>,
     reserved_food: bool,
     reverser: bool,
-    teleporter: bool,
+    // teleporter: bool,
 }
 
 impl Generator {
@@ -39,7 +41,7 @@ impl Generator {
             previous_consumer: None,
             reserved_food: config.reserved_food,
             reverser: config.reverser,
-            teleporter: config.teleporter,
+            // teleporter: config.teleporter,
         }
     }
 
@@ -140,30 +142,30 @@ impl ToData for Reverser {
 }
 
 // Idea: pass the position generator to the perk generator, so it can ask as many coord it needs.
-pub struct Teleporter {
-    other: Mutex<Option<Weak<Mutex<Teleporter>>>>,
-    other_coord: Mutex<Option<Coord>>,
-}
-
-#[async_trait]
-impl Perk for Teleporter {
-    async fn consume(&self, _id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
-        player.grow(5);
-        None
-    }
-
-    async fn was_placed(&self, coord: Coord) {
-        if let Some(other) = &*self.other.lock().await {
-            if let Some(other) = other.upgrade() {
-                *other.lock().await.other_coord = coord;
-                *other.lock
-            }
-        }
-    }
-}
-
-impl ToData for Teleporter {
-    fn push(&self, out: &mut Vec<u8>) {
-        out.push(3);
-    }
-}
+// pub struct Teleporter {
+//     other: Mutex<Option<Weak<Mutex<Teleporter>>>>,
+//     other_coord: Mutex<Option<Coord>>,
+// }
+//
+// #[async_trait]
+// impl Perk for Teleporter {
+//     async fn consume(&self, _id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
+//         player.grow(5);
+//         None
+//     }
+//
+//     async fn was_placed(&self, coord: Coord) {
+//         if let Some(other) = &*self.other.lock().await {
+//             if let Some(other) = other.upgrade() {
+//                 *other.lock().await.other_coord = coord;
+//                 *other.lock
+//             }
+//         }
+//     }
+// }
+//
+// impl ToData for Teleporter {
+//     fn push(&self, out: &mut Vec<u8>) {
+//         out.push(3);
+//     }
+// }

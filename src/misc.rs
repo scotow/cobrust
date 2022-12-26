@@ -23,13 +23,19 @@ pub trait ToData {
 }
 
 impl ToData for u8 {
-    fn push(&self, out: &mut Vec<u8>) { out.push(*self) }
+    fn push(&self, out: &mut Vec<u8>) {
+        out.push(*self)
+    }
 }
 
 impl ToData for u16 {
-    fn push(&self, out: &mut Vec<u8>) { out.extend_from_slice(&self.to_be_bytes()) }
+    fn push(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(&self.to_be_bytes())
+    }
 }
 
 impl ToData for [u8] {
-    fn push(&self, out: &mut Vec<u8>) { out.extend_from_slice(self) }
+    fn push(&self, out: &mut Vec<u8>) {
+        out.extend_from_slice(self)
+    }
 }
