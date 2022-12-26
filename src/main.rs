@@ -27,7 +27,7 @@ async fn main() {
             websocket.on_upgrade(move |socket| join_game(lobby, id, socket))
         });
 
-    warp::serve(warp::fs::dir("src/public").or(lobby_route).or(game_route))
+    warp::serve(warp::fs::dir("public").or(lobby_route).or(game_route))
         .run(([0, 0, 0, 0], 8080))
         .await;
 }
