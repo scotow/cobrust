@@ -161,6 +161,10 @@ body.playing #game {
     padding: 8px;
 }
 
+#lobby > .games > .content:empty {
+    cursor: pointer;
+}
+
 #lobby > .games > .content:empty::before {
     content: 'Create a game to begin...';
     position: absolute;
@@ -170,9 +174,15 @@ body.playing #game {
     text-align: center;
     font-size: 24px;
     font-weight: bold;
+    text-underline-offset: 3px;
+    text-decoration-color: darkgray;
     opacity: 0.2;
     color: darkgray;
     transform: translate(-50%, -50%);
+}
+
+#lobby > .games > .content:empty:hover::before {
+    text-decoration: underline;
 }
 
 #lobby > .games > .content > .game {

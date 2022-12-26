@@ -3,6 +3,7 @@ const BORDER_WIDTH = 5;
 class Lobby {
     constructor() {
         this.games = {};
+        this.setupEvents();
 
         this.socket = new WebSocket(`${baseWebsocketUrl()}/lobby`);
         this.socket.binaryType = 'arraybuffer';
@@ -38,6 +39,27 @@ class Lobby {
                 data.writeUnsignedByte(reverser);
                 this.socket.send(data.buffer);
             });
+        });
+    }
+
+    setupEvents() {
+        document.querySelector('#lobby > .games > .content').addEventListener('click', () => {
+            if (Object.keys(this.games).length === 0) {
+                document.getElementById('tab-create').checked = true;
+                document.getElementById('create-name').focus();
+            }
+        });
+
+        document.querySelectorAll('.validable').forEach((elem) => {
+            function setProcessButtonState() {
+                document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
+            }
+            elem.addEventListener('change', setProcessButtonState);
+            elem.addEventListener('keyup', setProcessButtonState);
+        });
+
+        document.getElementById('tab-create').addEventListener('change', () => {
+            document.getElementById('create-name').focus();
         });
     }
 
@@ -112,7 +134,7 @@ class LobbyGame {
         const speed = document.createElement('div');
         speed.classList.add('speed', 'icon');
         speed.innerText = String(info.speed);
-        
+
         this.players = document.createElement('div');
         this.players.classList.add('players', 'icon');
         this.players.innerText = String(info.playerCount);
@@ -212,7 +234,7 @@ class Game {
             this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
-            
+
             const scale = Math.min((mainSize.width - 60) / this.canvas.width, (mainSize.height + additionalHeight - 27 - 60) / this.canvas.height);
             this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
             this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
@@ -227,7 +249,7 @@ class Game {
 
         const header = document.createElement('div');
         header.classList.add('header');
-        
+
         const title = document.createElement('div');
         title.classList.add('title');
         title.innerText = name;
@@ -274,7 +296,7 @@ class Game {
         this.context.strokeRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
 
-    emptyCanvas() { 
+    emptyCanvas() {
         this.clearMode();
         this.context.fillRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
@@ -288,7 +310,7 @@ class Game {
             this.fillMode(color[0]);
             for (let i = 0; i < size; i++) {
                 const cell = {
-                    x: data.readUnsignedShort(), 
+                    x: data.readUnsignedShort(),
                     y: data.readUnsignedShort(),
                 };
                 body.push(cell);
@@ -345,7 +367,7 @@ class Game {
                     const player = this.players[data.readUnsignedShort()];
                     this.clearMode();
                     this.drawCell(player.body);
-    
+
                     const head = {
                         x: data.readUnsignedShort(),
                         y: data.readUnsignedShort(),
@@ -465,18 +487,6 @@ function animateTitle() {
         }
     }
 }
-
-document.querySelectorAll('.validable').forEach((elem) => {
-    function setProcessButtonState() {
-        document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
-    }
-    elem.addEventListener('change', setProcessButtonState);
-    elem.addEventListener('keyup', setProcessButtonState);
-});
-
-document.getElementById('tab-create').addEventListener('change', () => {
-    document.getElementById('create-name').focus();
-});
 
 new Lobby();
 animateTitle();
