@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    iter,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -182,7 +183,7 @@ impl Inner {
         }))
         .await
         .into_iter()
-        .filter_map(|m| m)
+        .flatten()
         .collect::<Vec<_>>();
 
         let mut need_respawn = Vec::new();
@@ -242,13 +243,20 @@ impl Inner {
             changes.push(SnakeChange::Die(id, head));
         }
         for (id, player, perk) in perk_consumed {
-            if let Some(additional_change) = perk.consume(id, &mut *player.lock().await).await {
+            if let Some(additional_change) = perk
+                .consume(id, &mut *player.lock().await, &self.perks)
+                .await
+            {
+                if let SnakeChange::Add(_, coord) = additional_change {
+                    if self.perks.contains_key(&coord) {
+                        self.perks.remove(&coord);
+                    }
+                }
                 changes.push(additional_change);
             }
             if perk.make_spawn_food() {
                 for perk in self.perk_generator.next(id) {
                     let coord = self.add_perk(size, Arc::clone(&perk));
-                    // perk.was_placed(coord).await;
                     new_perks.push((coord, perk));
                 }
             }
@@ -263,12 +271,10 @@ impl Inner {
     }
 
     fn safe_place(&self, size: Size) -> Coord {
-        loop {
-            let coord = Coord::random(size);
-            if matches!(self.grid[coord.y][coord.x], Cell::Empty) {
-                return coord;
-            }
-        }
+        iter::repeat_with(|| Coord::random(size))
+            .filter(|c| matches!(self.grid[c.y][c.x], Cell::Empty))
+            .next()
+            .unwrap()
     }
 
     fn add_perk(&mut self, size: Size, perk: Arc<Box<dyn Perk + Send + Sync>>) -> Coord {

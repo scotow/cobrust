@@ -109,4 +109,12 @@ impl Player {
         }
         direction.queue.clear();
     }
+
+    pub async fn teleport(&mut self, coord: Coord) -> bool {
+        if self.direction.lock().await.current.is_none() {
+            return false;
+        }
+        self.body.push_front(coord);
+        true
+    }
 }

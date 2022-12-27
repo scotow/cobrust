@@ -21,12 +21,13 @@ class Lobby {
                 const foodStrength = Number(document.getElementById('create-food-strength').value);
                 const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
                 const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
+                const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1 + 1);
+                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1 + 1 + 1);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
@@ -37,6 +38,7 @@ class Lobby {
                 data.writeUnsignedShort(foodStrength);
                 data.writeUnsignedByte(reservedFood);
                 data.writeUnsignedByte(reverser);
+                data.writeUnsignedByte(teleporter);
                 this.socket.send(data.buffer);
             });
         });
@@ -194,6 +196,7 @@ class Game {
     }
 
     processKey(event) {
+        console.log(event);
         let key;
         switch (event.code) {
             case 'ArrowUp':
@@ -229,6 +232,10 @@ class Game {
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
         this.resizeHandler = (additionalHeight) => {
+            if (typeof additionalHeight !== "number") {
+                additionalHeight = 0;
+            }
+
             const mainSize = document.getElementById('main').getBoundingClientRect();
             this.cellSize = Math.max(mainSize.width / this.size.width | 0, (mainSize.height + additionalHeight) / this.size.height | 0);
             this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
@@ -241,7 +248,7 @@ class Game {
             this.redrawCanvas();
         };
         this.resizeHandler(87);
-        window.addEventListener('resize', () => this.resizeHandler(0));
+        window.addEventListener('resize', this.resizeHandler);
 
         const nameLength = data.readUnsignedByte();
         const name = data.readString(nameLength);
@@ -259,6 +266,9 @@ class Game {
         leave.innerText = 'Leave';
         leave.addEventListener('click', () => {
             this.socket.close();
+            window.removeEventListener('resize', this.resizeHandler);
+            window.removeEventListener('keydown', this.keyEventHandler);
+
             document.body.classList.replace('playing', 'lobbying');
             const game = document.getElementById('game');
             while (game.firstChild) {
@@ -430,6 +440,9 @@ class Game {
                 break;
             case 2:
                 this.context.fillStyle = '#f0c808';
+                break;
+            case 3:
+                this.context.fillStyle = '#e7820e';
                 break;
             default: return;
         }

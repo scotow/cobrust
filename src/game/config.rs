@@ -32,6 +32,7 @@ impl Config {
         let food_strength = data.read_u16::<BE>().ok()?;
         let reserved_food = data.read_u8().ok()? > 0;
         let reverser = data.read_u8().ok()? > 0;
+        let teleporter = data.read_u8().ok()? > 0;
 
         Some(Self {
             name,
@@ -41,7 +42,7 @@ impl Config {
             food_strength,
             reserved_food,
             reverser,
-            teleporter: true,
+            teleporter,
         })
     }
 

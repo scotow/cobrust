@@ -1,12 +1,13 @@
-use std::{mem::size_of, sync::Arc};
+use std::{collections::HashMap, mem::size_of, sync::Arc};
 
 use async_trait::async_trait;
 use byteorder::{WriteBytesExt, BE};
+use rand::random;
 
 use crate::{
     game::{
         config::Config,
-        // coordinate::Coord,
+        coordinate::Coord,
         packet::SnakeChange,
         player::{Player, PlayerId},
     },
@@ -15,13 +16,20 @@ use crate::{
 
 #[async_trait]
 pub trait Perk: ToData {
-    async fn consume(&self, id: PlayerId, player: &mut Player) -> Option<SnakeChange>;
+    async fn consume(
+        &self,
+        id: PlayerId,
+        player: &mut Player,
+        perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    ) -> Option<SnakeChange>;
 
     fn make_spawn_food(&self) -> bool {
         false
     }
 
-    // async fn was_placed(&self, coord: Coord) {}
+    fn group_id(&self) -> Option<u16> {
+        None
+    }
 }
 
 pub struct Generator {
@@ -30,7 +38,7 @@ pub struct Generator {
     previous_consumer: Option<PlayerId>,
     reserved_food: bool,
     reverser: bool,
-    // teleporter: bool,
+    teleporter: bool,
 }
 
 impl Generator {
@@ -41,7 +49,7 @@ impl Generator {
             previous_consumer: None,
             reserved_food: config.reserved_food,
             reverser: config.reverser,
-            // teleporter: config.teleporter,
+            teleporter: config.teleporter,
         }
     }
 
@@ -64,15 +72,17 @@ impl Generator {
         if self.reverser && self.count % 8 == 0 {
             perks.push(Arc::new(Box::new(Reverser)));
         }
-        // if self.teleporter && self.count % 1 == 0 {
-        //     let t1 = Arc::new(Box::new(Teleporter(None));
-        //     let t2 = Teleporter(None);
-        //     //
-        //     //
-        //     // let t1 = Arc::new(Box::new(Teleporter(Weak::new())));
-        //     // let t2 = Arc::new(Box::new(Teleporter(Arc::downgrade(&t1))));
-        //     // let
-        // }
+        if self.teleporter && self.count % 8 == 4 {
+            let (id_1, id_2) = (random(), random());
+            perks.push(Arc::new(Box::new(Teleporter {
+                self_id: id_1,
+                dest_id: id_2,
+            })));
+            perks.push(Arc::new(Box::new(Teleporter {
+                self_id: id_2,
+                dest_id: id_1,
+            })));
+        }
 
         perks
     }
@@ -86,7 +96,12 @@ pub struct Food(pub u16);
 
 #[async_trait]
 impl Perk for Food {
-    async fn consume(&self, _id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
+    async fn consume(
+        &self,
+        _id: PlayerId,
+        player: &mut Player,
+        _perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    ) -> Option<SnakeChange> {
         player.grow(self.0);
         None
     }
@@ -109,7 +124,12 @@ pub struct ReservedFood {
 
 #[async_trait]
 impl Perk for ReservedFood {
-    async fn consume(&self, id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
+    async fn consume(
+        &self,
+        id: PlayerId,
+        player: &mut Player,
+        _perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    ) -> Option<SnakeChange> {
         if id == self.owner {
             player.grow(self.strength);
         }
@@ -129,7 +149,12 @@ pub struct Reverser;
 
 #[async_trait]
 impl Perk for Reverser {
-    async fn consume(&self, id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
+    async fn consume(
+        &self,
+        id: PlayerId,
+        player: &mut Player,
+        _perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    ) -> Option<SnakeChange> {
         player.reverse().await;
         Some(SnakeChange::Reverse(id))
     }
@@ -141,31 +166,38 @@ impl ToData for Reverser {
     }
 }
 
-// Idea: pass the position generator to the perk generator, so it can ask as many coord it needs.
-// pub struct Teleporter {
-//     other: Mutex<Option<Weak<Mutex<Teleporter>>>>,
-//     other_coord: Mutex<Option<Coord>>,
-// }
-//
-// #[async_trait]
-// impl Perk for Teleporter {
-//     async fn consume(&self, _id: PlayerId, player: &mut Player) -> Option<SnakeChange> {
-//         player.grow(5);
-//         None
-//     }
-//
-//     async fn was_placed(&self, coord: Coord) {
-//         if let Some(other) = &*self.other.lock().await {
-//             if let Some(other) = other.upgrade() {
-//                 *other.lock().await.other_coord = coord;
-//                 *other.lock
-//             }
-//         }
-//     }
-// }
-//
-// impl ToData for Teleporter {
-//     fn push(&self, out: &mut Vec<u8>) {
-//         out.push(3);
-//     }
-// }
+pub struct Teleporter {
+    self_id: u16,
+    dest_id: u16,
+}
+
+#[async_trait]
+impl Perk for Teleporter {
+    // Handle double consume.
+    async fn consume(
+        &self,
+        id: PlayerId,
+        player: &mut Player,
+        perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    ) -> Option<SnakeChange> {
+        // Handle simultaneously consuming.
+        let dest_coord = *perks
+            .iter()
+            .find(|(_, perk)| Some(self.dest_id) == perk.group_id())?
+            .0;
+        player
+            .teleport(dest_coord)
+            .await
+            .then_some(SnakeChange::Add(id, dest_coord))
+    }
+
+    fn group_id(&self) -> Option<u16> {
+        Some(self.self_id)
+    }
+}
+
+impl ToData for Teleporter {
+    fn push(&self, out: &mut Vec<u8>) {
+        out.push(3);
+    }
+}

@@ -405,6 +405,10 @@ body.playing #game {
     background: #f0c808;
 }
 
+#lobby > .rules > .content > .section > .perk > .color.teleporter {
+    background: #e7820e;
+}
+
 #lobby > .rules > .content > .section > .perk > .info {
     display: inline-block;
     font-size: 14px;
