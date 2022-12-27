@@ -1,9 +1,9 @@
 use std::{collections::VecDeque, convert::TryFrom};
 
+use axum::extract::ws::{Message, WebSocket};
 use futures::{stream::SplitSink, SinkExt};
 use rand::Rng;
 use tokio::sync::Mutex;
-use warp::ws::{Message, WebSocket};
 
 use crate::game::{coordinate::Coord, direction::Dir, size::Size};
 

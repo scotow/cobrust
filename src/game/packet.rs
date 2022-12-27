@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use axum::extract::ws::Message;
 use tokio::sync::MutexGuard;
-use warp::ws::Message;
 
 use crate::{
     game::{
@@ -78,7 +78,7 @@ impl<'a> Packet<'a> {
                 packet
             }
         };
-        Message::binary(payload)
+        Message::Binary(payload)
     }
 }
 

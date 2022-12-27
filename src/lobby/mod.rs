@@ -1,9 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
+use axum::extract::ws::{Message, WebSocket};
 use futures::{future::join_all, stream::SplitSink, SinkExt, StreamExt};
 use packet::Packet;
 use tokio::{sync::Mutex, task};
-use warp::ws::{Message, WebSocket};
 
 use crate::game::{config::Config, Game};
 
@@ -45,11 +45,10 @@ impl Lobby {
                 Some(Ok(message)) => message,
                 _ => break,
             };
-            if message.is_close() {
-                break;
-            }
 
-            let data = message.as_bytes();
+            let Message::Binary(data) = message else {
+                break;
+            };
             match data[0] {
                 0 => {
                     let mut inner = self.inner.lock().await;

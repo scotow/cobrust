@@ -1,41 +1,49 @@
-use std::sync::Arc;
+use std::{error::Error as StdError, net::SocketAddr, sync::Arc, u16};
 
-use warp::{ws::WebSocket, Filter};
+use axum::{
+    extract::{Path, State, WebSocketUpgrade},
+    response::Response,
+    routing::get,
+    Router, Server,
+};
 
 use crate::lobby::Lobby;
 
+mod asset;
 mod game;
 mod lobby;
 mod misc;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn StdError + Send + Sync>> {
     env_logger::init();
 
-    let lobby = Arc::new(Lobby::new());
-    let lobby_ref = warp::any().map(move || Arc::clone(&lobby));
-    let lobby_route = warp::path("lobby")
-        .and(warp::ws())
-        .and(lobby_ref.clone())
-        .map(|websocket: warp::ws::Ws, lobby: Arc<Lobby>| {
-            websocket.on_upgrade(move |socket| join_lobby(lobby, socket))
-        });
-    let game_route = warp::path!("games" / u16)
-        .and(warp::ws())
-        .and(lobby_ref.clone())
-        .map(|id, websocket: warp::ws::Ws, lobby: Arc<Lobby>| {
-            websocket.on_upgrade(move |socket| join_game(lobby, id, socket))
-        });
+    let router = Router::new()
+        .route("/lobby", get(lobby_handler))
+        .route("/games/:id", get(join_game_handler))
+        .with_state(Arc::new(Lobby::new()))
+        .route("/", get(asset::handler))
+        .route("/:asset", get(asset::handler));
 
-    warp::serve(warp::fs::dir("public").or(lobby_route).or(game_route))
-        .run(([0, 0, 0, 0], 8080))
-        .await;
+    Server::bind(&SocketAddr::new("0.0.0.0".parse()?, 8080))
+        .http1_title_case_headers(true)
+        .serve(router.into_make_service())
+        .await?;
+    Ok(())
 }
 
-async fn join_lobby(lobby: Arc<Lobby>, socket: WebSocket) {
-    lobby.join(socket).await;
+async fn lobby_handler(State(lobby): State<Arc<Lobby>>, ws: WebSocketUpgrade) -> Response {
+    ws.on_upgrade(move |socket| async move {
+        lobby.join(socket).await;
+    })
 }
 
-async fn join_game(lobby: Arc<Lobby>, id: u16, socket: WebSocket) {
-    lobby.play(id, socket).await;
+async fn join_game_handler(
+    State(lobby): State<Arc<Lobby>>,
+    Path(id): Path<u16>,
+    ws: WebSocketUpgrade,
+) -> Response {
+    ws.on_upgrade(move |socket| async move {
+        lobby.play(id, socket).await;
+    })
 }

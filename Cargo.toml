@@ -1,14 +1,15 @@
 [package]
 name = "cobrust"
-version = "0.3.8"
+version = "0.3.10"
 authors = ["Scotow <contact@scotow.com>"]
 edition = "2021"
 
 [dependencies]
-warp = "0.3.3"
-futures = "0.3.25"
-tokio = { version = "1.23.0", features = ["full"] }
-env_logger = "0.10.0"
-rand = "0.8.5"
-byteorder = "1.4.3"
 async-trait = "0.1.60"
+axum = { version = "0.6.1", features = ["ws"] }
+byteorder = "1.4.3"
+env_logger = "0.10.0"
+futures = "0.3.25"
+rand = "0.8.5"
+rust-embed = "6.4.2"
+tokio = { version = "1.23.0", features = ["sync", "rt-multi-thread", "macros"] }

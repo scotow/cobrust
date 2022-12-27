@@ -4,6 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use axum::extract::ws::{Message, WebSocket};
 use cell::Cell;
 use coordinate::Coord;
 use futures::{future::join_all, stream::SplitStream, StreamExt};
@@ -11,7 +12,6 @@ use packet::Packet;
 use player::Player;
 use size::Size;
 use tokio::{sync::Mutex, time::sleep};
-use warp::ws::WebSocket;
 
 use crate::game::{
     config::Config,
@@ -146,11 +146,10 @@ impl Game {
                 Some(Ok(message)) => message,
                 _ => break,
             };
-            if message.is_close() {
-                break;
-            }
 
-            let data = message.as_bytes();
+            let Message::Binary(data) = message else {
+                break;
+            };
             match data[0] {
                 0 => player.lock().await.process(&data[1..]).await,
                 _ => break,

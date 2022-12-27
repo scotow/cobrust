@@ -9,6 +9,5 @@ RUN cargo build --release
 FROM gcr.io/distroless/cc
 
 COPY --from=builder /app/target/release/cobrust /cobrust
-COPY src/public /public
 
 ENTRYPOINT ["/cobrust"]

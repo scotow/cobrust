@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use warp::filters::ws::Message;
+use axum::extract::ws::Message;
 
 use crate::{game::Game, lobby::GameId, misc::ToData, packet};
 
@@ -37,6 +37,6 @@ impl<'a> Packet<'a> {
                 packet![3u8, id]
             }
         };
-        Message::binary(payload)
+        Message::Binary(payload)
     }
 }
