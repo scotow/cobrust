@@ -40,9 +40,7 @@ pub struct Game {
 impl Game {
     pub fn new(config: Config) -> Self {
         let mut inner = Inner {
-            grid: (0..config.size.height)
-                .map(|_y| (0..config.size.width).map(|_x| Cell::Empty).collect())
-                .collect(),
+            grid: vec![vec![Cell::Empty; config.size.width as usize]; config.size.height as usize],
             players: HashMap::new(),
             perks: HashMap::new(),
             perk_generator: Generator::new(&config),

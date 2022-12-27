@@ -24,22 +24,21 @@ impl Add<(Dir, Size)> for Coord {
     type Output = Self;
 
     fn add(self, rhs: (Dir, Size)) -> Self::Output {
-        use Dir::*;
         match rhs.0 {
-            Up => Coord {
+            Dir::Up => Coord {
                 x: self.x,
                 y: (self.y as isize - 1).rem_euclid(rhs.1.height as isize) as usize,
             },
-            Down => Coord {
+            Dir::Down => Coord {
                 x: self.x,
-                y: (self.y as isize + 1).rem_euclid(rhs.1.height as isize) as usize,
+                y: (self.y + 1).rem_euclid(rhs.1.height as usize),
             },
-            Left => Coord {
+            Dir::Left => Coord {
                 x: (self.x as isize - 1).rem_euclid(rhs.1.width as isize) as usize,
                 y: self.y,
             },
-            Right => Coord {
-                x: (self.x as isize + 1).rem_euclid(rhs.1.width as isize) as usize,
+            Dir::Right => Coord {
+                x: (self.x + 1).rem_euclid(rhs.1.width as usize),
                 y: self.y,
             },
         }

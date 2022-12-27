@@ -13,9 +13,8 @@ pub enum Packet<'a> {
 
 impl<'a> Packet<'a> {
     pub async fn message(self) -> Message {
-        use Packet::*;
         let payload = match self {
-            AddGames(games) => {
+            Packet::AddGames(games) => {
                 let mut packet = Vec::with_capacity(128);
                 packet.push(0);
                 for (&id, game) in games {
@@ -28,13 +27,13 @@ impl<'a> Packet<'a> {
                 }
                 packet
             }
-            RemoveGame(id) => {
+            Packet::RemoveGame(id) => {
                 packet![1u8, id]
             }
-            PlayerCount(id, count) => {
+            Packet::PlayerCount(id, count) => {
                 packet![2u8, id, count]
             }
-            GameCreated(id) => {
+            Packet::GameCreated(id) => {
                 packet![3u8, id]
             }
         };

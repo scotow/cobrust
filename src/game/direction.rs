@@ -12,25 +12,23 @@ pub enum Dir {
 
 impl Dir {
     pub fn conflict(&self, other: &Self) -> bool {
-        use Dir::*;
         if self == other {
             return true;
         }
         match (self, other) {
-            (Up, Down) | (Down, Up) => true,
-            (Left, Right) | (Right, Left) => true,
+            (Self::Up, Self::Down) | (Self::Down, Self::Up) => true,
+            (Self::Left, Self::Right) | (Self::Right, Self::Left) => true,
             _ => false,
         }
     }
 
     #[allow(dead_code)]
     pub fn opposite(&self) -> Self {
-        use Dir::*;
         match self {
-            Up => Down,
-            Down => Up,
-            Left => Right,
-            Right => Left,
+            Self::Up => Self::Down,
+            Self::Down => Self::Up,
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
         }
     }
 }
@@ -38,20 +36,19 @@ impl Dir {
 impl From<(Coord, Coord)> for Dir {
     // This doesn't work well if the two cells are split by the cyclic world.
     fn from((head, body): (Coord, Coord)) -> Self {
-        use Dir::*;
         let x_delta = head.x as isize - body.x as isize;
         let y_delta = head.y as isize - body.y as isize;
         if x_delta.abs() >= y_delta.abs() {
             if x_delta.is_positive() {
-                Right
+                Self::Right
             } else {
-                Left
+                Self::Left
             }
         } else {
             if y_delta.is_positive() {
-                Down
+                Self::Down
             } else {
-                Up
+                Self::Up
             }
         }
     }
@@ -61,12 +58,11 @@ impl TryFrom<u8> for Dir {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        use Dir::*;
         Ok(match value {
-            0 => Up,
-            1 => Down,
-            2 => Left,
-            3 => Right,
+            0 => Self::Up,
+            1 => Self::Down,
+            2 => Self::Left,
+            3 => Self::Right,
             _ => return Err(()),
         })
     }

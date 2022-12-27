@@ -25,9 +25,8 @@ pub enum Packet<'a> {
 
 impl<'a> Packet<'a> {
     pub fn message(self) -> Message {
-        use Packet::*;
         let payload = match self {
-            Info(size, name, self_id) => {
+            Packet::Info(size, name, self_id) => {
                 packet![
                     0u8,
                     size.width as u16,
@@ -37,7 +36,7 @@ impl<'a> Packet<'a> {
                     self_id
                 ]
             }
-            Snakes(players) => {
+            Packet::Snakes(players) => {
                 let mut packet = Vec::with_capacity(128);
                 packet![packet; 1u8];
                 for (id, player) in players {
@@ -48,7 +47,7 @@ impl<'a> Packet<'a> {
                 }
                 packet
             }
-            Perks(perks) => {
+            Packet::Perks(perks) => {
                 let mut packet = Vec::with_capacity(perks.len() * 4);
                 packet![packet; 2u8];
                 for (coord, perk) in perks {
@@ -56,21 +55,24 @@ impl<'a> Packet<'a> {
                 }
                 packet
             }
-            PlayerJoined(id, head, color) => {
+            Packet::PlayerJoined(id, head, color) => {
                 packet![3u8, id, color.0, color.1, head.x as u16, head.y as u16]
             }
-            PlayerLeft(id) => {
+            Packet::PlayerLeft(id) => {
                 packet![4u8, id]
             }
-            SnakeChanges(changes) => {
-                use SnakeChange::*;
+            Packet::SnakeChanges(changes) => {
                 let mut packet = packet![5u8];
                 for change in changes {
                     match change {
-                        Remove(id) => packet![packet; 0u8, id],
-                        Add(id, coord) => packet![packet; 1u8, id, coord.x as u16, coord.y as u16],
-                        Die(id, coord) => packet![packet; 2u8, id, coord.x as u16, coord.y as u16],
-                        Reverse(id) => packet![packet; 3u8, id],
+                        SnakeChange::Remove(id) => packet![packet; 0u8, id],
+                        SnakeChange::Add(id, coord) => {
+                            packet![packet; 1u8, id, coord.x as u16, coord.y as u16]
+                        }
+                        SnakeChange::Die(id, coord) => {
+                            packet![packet; 2u8, id, coord.x as u16, coord.y as u16]
+                        }
+                        SnakeChange::Reverse(id) => packet![packet; 3u8, id],
                     }
                 }
                 packet
