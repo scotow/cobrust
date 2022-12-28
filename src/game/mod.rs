@@ -222,10 +222,14 @@ impl Inner {
                     need_respawn.push((*id, Arc::clone(player)));
                 }
                 Cell::Perk(perk) => {
-                    perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
-                    self.grid[new.y][new.x] = Cell::Occupied(*id);
-                    self.perks.remove(new);
-                    changes.push(SnakeChange::Add(*id, *new));
+                    if *collisions.get(new).unwrap() == 1 {
+                        perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
+                        self.grid[new.y][new.x] = Cell::Occupied(*id);
+                        self.perks.remove(new);
+                        changes.push(SnakeChange::Add(*id, *new));
+                    } else {
+                        need_respawn.push((*id, Arc::clone(player)));
+                    }
                 }
             }
         }
