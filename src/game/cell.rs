@@ -6,5 +6,5 @@ use crate::game::{perk::Perk, player::PlayerId};
 pub enum Cell {
     Empty,
     Occupied(PlayerId),
-    Perk(Arc<Box<dyn Perk + Send + Sync>>),
+    Perk(Arc<dyn Perk + Send + Sync>),
 }

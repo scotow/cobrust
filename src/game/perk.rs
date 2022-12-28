@@ -20,7 +20,7 @@ pub trait Perk: ToData {
         &self,
         id: PlayerId,
         player: &mut Player,
-        perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+        perks: &HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
     ) -> Option<SnakeChange>;
 
     fn make_spawn_food(&self) -> bool {
@@ -53,35 +53,35 @@ impl Generator {
         }
     }
 
-    pub fn next(&mut self, consumer: PlayerId) -> Vec<Arc<Box<dyn Perk + Sync + Send>>> {
+    pub fn next(&mut self, consumer: PlayerId) -> Vec<Arc<dyn Perk + Sync + Send>> {
         self.count = self.count % u8::MAX + 1;
-        let mut perks: Vec<Arc<Box<dyn Perk + Sync + Send>>> = Vec::with_capacity(3);
-        perks.push(Arc::new(Box::new(Food(self.food_strength))));
+        let mut perks: Vec<Arc<dyn Perk + Sync + Send>> = Vec::with_capacity(3);
+        perks.push(Arc::new(Food(self.food_strength)));
 
         if self.reserved_food {
             if self.previous_consumer == Some(consumer) {
-                perks.push(Arc::new(Box::new(ReservedFood {
+                perks.push(Arc::new(ReservedFood {
                     strength: self.food_strength * 2,
                     owner: consumer,
-                })));
+                }));
                 self.previous_consumer = None;
             } else {
                 self.previous_consumer = Some(consumer);
             }
         }
         if self.reverser && self.count % 8 == 0 {
-            perks.push(Arc::new(Box::new(Reverser)));
+            perks.push(Arc::new(Reverser));
         }
         if self.teleporter && self.count % 8 == 4 {
             let (id_1, id_2) = (random(), random());
-            perks.push(Arc::new(Box::new(Teleporter {
+            perks.push(Arc::new(Teleporter {
                 self_id: id_1,
                 dest_id: id_2,
-            })));
-            perks.push(Arc::new(Box::new(Teleporter {
+            }));
+            perks.push(Arc::new(Teleporter {
                 self_id: id_2,
                 dest_id: id_1,
-            })));
+            }));
         }
 
         perks
@@ -100,7 +100,7 @@ impl Perk for Food {
         &self,
         _id: PlayerId,
         player: &mut Player,
-        _perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+        _perks: &HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
     ) -> Option<SnakeChange> {
         player.grow(self.0);
         None
@@ -128,7 +128,7 @@ impl Perk for ReservedFood {
         &self,
         id: PlayerId,
         player: &mut Player,
-        _perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+        _perks: &HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
     ) -> Option<SnakeChange> {
         if id == self.owner {
             player.grow(self.strength);
@@ -153,7 +153,7 @@ impl Perk for Reverser {
         &self,
         id: PlayerId,
         player: &mut Player,
-        _perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+        _perks: &HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
     ) -> Option<SnakeChange> {
         player.reverse().await;
         Some(SnakeChange::Reverse(id))
@@ -178,7 +178,7 @@ impl Perk for Teleporter {
         &self,
         id: PlayerId,
         player: &mut Player,
-        perks: &HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+        perks: &HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
     ) -> Option<SnakeChange> {
         // Handle simultaneously consuming.
         let dest_coord = *perks

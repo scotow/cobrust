@@ -17,7 +17,7 @@ use crate::{
 pub enum Packet<'a> {
     Info(Size, &'a str, PlayerId),
     Snakes(Vec<(PlayerId, MutexGuard<'a, Player>)>),
-    Perks(Vec<(Coord, Arc<Box<dyn Perk + Sync + Send>>)>),
+    Perks(Vec<(Coord, Arc<dyn Perk + Sync + Send>)>),
     PlayerJoined(PlayerId, Coord, (u16, u16)),
     PlayerLeft(PlayerId),
     SnakeChanges(Vec<SnakeChange>),

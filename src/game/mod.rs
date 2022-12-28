@@ -34,7 +34,6 @@ pub struct Game {
     pub name: String,
     pub size: Size,
     pub speed: u8,
-    pub food_strength: u16,
     inner: Arc<Mutex<Inner>>,
 }
 
@@ -48,17 +47,13 @@ impl Game {
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
-            inner.add_perk(
-                config.size,
-                Arc::new(Box::new(inner.perk_generator.fresh_food())),
-            );
+            inner.add_perk(config.size, Arc::new(inner.perk_generator.fresh_food()));
         }
 
         Self {
             name: config.name,
             size: config.size,
             speed: config.speed,
-            food_strength: config.food_strength,
             inner: Arc::new(Mutex::new(inner)),
         }
     }
@@ -88,7 +83,7 @@ impl Game {
         let id = rand::random();
         let mut player = Player::new(head, tx);
         let color = player.color;
-        let _ = player
+        player
             .send(Packet::Info(self.size, &self.name, id).message())
             .await;
 
@@ -167,7 +162,7 @@ impl Game {
 struct Inner {
     grid: Vec<Vec<Cell>>,
     players: HashMap<PlayerId, Arc<Mutex<Player>>>,
-    perks: HashMap<Coord, Arc<Box<dyn Perk + Send + Sync>>>,
+    perks: HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
     perk_generator: Generator,
     last_leave: Instant,
 }
@@ -277,7 +272,7 @@ impl Inner {
             .unwrap()
     }
 
-    fn add_perk(&mut self, size: Size, perk: Arc<Box<dyn Perk + Send + Sync>>) -> Coord {
+    fn add_perk(&mut self, size: Size, perk: Arc<dyn Perk + Send + Sync>) -> Coord {
         let coord = self.safe_place(size);
         self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&perk));
         self.perks.insert(coord, Arc::clone(&perk));
