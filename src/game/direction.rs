@@ -34,22 +34,15 @@ impl Dir {
 }
 
 impl From<(Coord, Coord)> for Dir {
-    // This doesn't work well if the two cells are split by the cyclic world.
     fn from((head, body): (Coord, Coord)) -> Self {
         let x_delta = head.x as isize - body.x as isize;
         let y_delta = head.y as isize - body.y as isize;
-        if x_delta.abs() >= y_delta.abs() {
-            if x_delta.is_positive() {
-                Self::Right
-            } else {
-                Self::Left
-            }
-        } else {
-            if y_delta.is_positive() {
-                Self::Down
-            } else {
-                Self::Up
-            }
+        match (x_delta, y_delta) {
+            (1 | ..=-2, 0) => Self::Right,
+            (-1 | 2.., 0) => Self::Left,
+            (0, 1 | ..=-2) | (0, 0) => Self::Down,
+            (0, -1 | 2..) => Self::Up,
+            _ => unreachable!(),
         }
     }
 }

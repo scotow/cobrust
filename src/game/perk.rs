@@ -54,25 +54,24 @@ impl Generator {
     }
 
     pub fn next(&mut self, consumer: PlayerId) -> Vec<Arc<dyn Perk + Sync + Send>> {
-        self.count = self.count % u8::MAX + 1;
+        self.count = self.count.wrapping_add(1);
         let mut perks: Vec<Arc<dyn Perk + Sync + Send>> = Vec::with_capacity(3);
         perks.push(Arc::new(Food(self.food_strength)));
 
         if self.reserved_food {
-            if self.previous_consumer == Some(consumer) {
+            if self.previous_consumer.take() == Some(consumer) {
                 perks.push(Arc::new(ReservedFood {
                     strength: self.food_strength * 2,
                     owner: consumer,
                 }));
-                self.previous_consumer = None;
             } else {
                 self.previous_consumer = Some(consumer);
             }
         }
-        if self.reverser && self.count % 8 == 0 {
+        if self.reverser && self.count % 8 == 4 {
             perks.push(Arc::new(Reverser));
         }
-        if self.teleporter && self.count % 8 == 4 {
+        if self.teleporter && self.count % 8 == 0 {
             let (id_1, id_2) = (random(), random());
             perks.push(Arc::new(Teleporter {
                 self_id: id_1,
