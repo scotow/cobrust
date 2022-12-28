@@ -41,6 +41,11 @@ pub struct Generator {
     teleporter: bool,
 }
 
+// Perk ideas:
+// - Invisible timer
+// - Mines spawn (random, behind tail, or head?), if person take 3 reserved foods in a row
+// - Frenzy: spawn N foods or reserved foods at once
+
 impl Generator {
     pub fn new(config: &Config) -> Self {
         Self {
@@ -53,6 +58,7 @@ impl Generator {
         }
     }
 
+    // Spread power spawn evenly (even if some are disabled). Vec<fn>?
     pub fn next(&mut self, consumer: PlayerId) -> Vec<Arc<dyn Perk + Sync + Send>> {
         self.count = self.count.wrapping_add(1);
         let mut perks: Vec<Arc<dyn Perk + Sync + Send>> = Vec::with_capacity(3);

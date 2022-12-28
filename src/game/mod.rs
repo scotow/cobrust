@@ -168,6 +168,12 @@ struct Inner {
 }
 
 impl Inner {
+    // Order:
+    // - free all tails
+    // - group next heads by coord
+    // - apply heads (queue respawns and perks consuming)
+    // - process respawns
+    // - consume perks
     async fn walk_snakes(&mut self, size: Size) {
         let walks = join_all(self.players.iter().map(|(&id, p)| async move {
             p.lock()
