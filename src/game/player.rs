@@ -2,11 +2,12 @@ use std::{collections::VecDeque, convert::TryFrom};
 
 use axum::extract::ws::{Message, WebSocket};
 use futures::{stream::SplitSink, SinkExt};
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use tokio::sync::Mutex;
 
 use crate::game::{coordinate::Coord, direction::Dir, size::Size};
 
+const COLOR_GAP: u16 = 60;
 const START_SIZE: u16 = 9;
 
 pub(super) type PlayerId = u16;
@@ -28,12 +29,15 @@ struct Direction {
 
 impl Player {
     pub fn new(head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
-        let mut rng = rand::thread_rng();
+        let head_color = thread_rng().gen_range(0..360);
         Self {
             body: VecDeque::from(vec![head]),
             direction: Mutex::new(Direction::default()),
             growth: START_SIZE,
-            color: (rng.gen_range(0..360), rng.gen_range(0..360)),
+            color: (
+                head_color,
+                head_color + COLOR_GAP + thread_rng().gen_range(0..360 - COLOR_GAP * 2),
+            ),
             sink: tx,
         }
     }
