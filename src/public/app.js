@@ -196,7 +196,6 @@ class Game {
     }
 
     processKey(event) {
-        console.log(event);
         let key;
         switch (event.code) {
             case 'ArrowUp':

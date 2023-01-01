@@ -86,7 +86,10 @@ impl Lobby {
 
     pub async fn play(&self, id: GameId, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
-        let game = Arc::clone(inner.games.get(&id).unwrap());
+        let Some(game) = inner.games.get(&id).cloned() else {
+            let _ = socket.close().await;
+            return;
+        };
         inner
             .broadcast_message(
                 Packet::PlayerCount(id, (game.player_count().await + 1) as u8)
@@ -129,11 +132,8 @@ impl Inner {
     }
 
     async fn broadcast_message(&mut self, message: Message) {
-        join_all(self.users.values_mut().map(|user| {
-            let message = message.clone();
-            async move {
-                let _ = user.lock().await.send(message).await;
-            }
+        join_all(self.users.values_mut().map(|user| async {
+            let _ = user.lock().await.send(message.clone()).await;
         }))
         .await;
     }
