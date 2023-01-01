@@ -2,7 +2,10 @@ use std::ops::Add;
 
 use rand::Rng;
 
-use crate::game::{direction::Dir, size::Size};
+use crate::{
+    game::{direction::Dir, size::Size},
+    misc::ToData,
+};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Coord {
@@ -42,5 +45,12 @@ impl Add<(Dir, Size)> for Coord {
                 y: self.y,
             },
         }
+    }
+}
+
+impl ToData for Coord {
+    fn push(&self, out: &mut Vec<u8>) {
+        (self.x as u16).push(out);
+        (self.y as u16).push(out);
     }
 }

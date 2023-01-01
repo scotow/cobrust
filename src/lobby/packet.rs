@@ -15,12 +15,11 @@ impl<'a> Packet<'a> {
     pub async fn message(self) -> Message {
         let payload = match self {
             Packet::AddGames(games) => {
-                let mut packet = Vec::with_capacity(128);
-                packet.push(0);
+                let mut packet = packet![cap games.len() * 32; 0u8];
                 for (&id, game) in games {
                     packet![packet; id,
                         game.name.as_bytes().len() as u8, game.name.as_bytes(),
-                        game.size.width as u16, game.size.height as u16,
+                        game.size,
                         game.speed,
                         game.player_count().await as u8
                     ];

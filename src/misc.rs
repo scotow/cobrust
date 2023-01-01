@@ -9,6 +9,15 @@ macro_rules! packet {
             packet
         }
     };
+    [cap $size:expr; $($elem:expr),*] => {
+        {
+            let mut packet = Vec::with_capacity($size);
+            $(
+                $elem.push(&mut packet);
+            )*
+            packet
+        }
+    };
     [$vec:expr; $($elem:expr),*] => {
         {
             $(

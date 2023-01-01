@@ -193,7 +193,7 @@ impl Perk for Teleporter {
         player
             .teleport(dest_coord)
             .await
-            .then_some(SnakeChange::Add(id, dest_coord))
+            .then_some(SnakeChange::AddCell(id, dest_coord))
     }
 
     fn group_id(&self) -> Option<u16> {

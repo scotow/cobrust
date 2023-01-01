@@ -196,7 +196,7 @@ impl Inner {
         for (id, _player, (removed, _new)) in walks.iter() {
             if let Some(removed) = removed {
                 self.grid[removed.y][removed.x] = Cell::Empty;
-                changes.push(SnakeChange::Remove(*id));
+                changes.push(SnakeChange::RemoveTail(*id));
             }
         }
 
@@ -213,7 +213,7 @@ impl Inner {
                 Cell::Empty => {
                     if *collisions.get(new).unwrap() == 1 {
                         self.grid[new.y][new.x] = Cell::Occupied(*id);
-                        changes.push(SnakeChange::Add(*id, *new));
+                        changes.push(SnakeChange::AddCell(*id, *new));
                     } else {
                         need_respawn.push((*id, Arc::clone(player)));
                     }
@@ -226,7 +226,7 @@ impl Inner {
                         perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
                         self.grid[new.y][new.x] = Cell::Occupied(*id);
                         self.perks.remove(new);
-                        changes.push(SnakeChange::Add(*id, *new));
+                        changes.push(SnakeChange::AddCell(*id, *new));
                     } else {
                         need_respawn.push((*id, Arc::clone(player)));
                     }
@@ -252,10 +252,9 @@ impl Inner {
                 .consume(id, &mut *player.lock().await, &self.perks)
                 .await
             {
-                if let SnakeChange::Add(_, coord) = additional_change {
-                    if self.perks.contains_key(&coord) {
-                        self.perks.remove(&coord);
-                    }
+                if let SnakeChange::AddCell(id, coord) = additional_change {
+                    self.grid[coord.y][coord.x] = Cell::Occupied(id);
+                    self.perks.remove(&coord);
                 }
                 changes.push(additional_change);
             }
