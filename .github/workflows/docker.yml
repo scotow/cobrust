@@ -10,6 +10,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: Update toolchain
+        run: rustup update
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run tests
@@ -19,6 +21,8 @@ jobs:
     needs:
       - test
     steps:
+      - name: Update toolchain
+        run: rustup update
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Build and push Docker image

@@ -1,6 +1,6 @@
 [package]
 name = "cobrust"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Scotow <contact@scotow.com>"]
 edition = "2021"
 
