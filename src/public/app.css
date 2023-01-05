@@ -248,13 +248,10 @@ body.playing #game {
 }
 
 #lobby > .create > .content {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
     padding: 12px;
 }
 
-#lobby > .create > .content > .settings > .section {
+#lobby > .create > .content > .settings > .section:nth-last-child(n+2) {
     margin-bottom: 16px;
 }
 
@@ -262,6 +259,10 @@ body.playing #game {
     margin-bottom: 8px;
     font-size: 20px;
     font-weight: bold;
+}
+
+#lobby > .create > .content > .settings > .section > .spacing {
+    margin-top: 12px;
 }
 
 #lobby > .create > .content > .settings > .section > .input > .label {
@@ -317,7 +318,9 @@ body.playing #game {
 }
 
 #lobby > .create > .content > .actions {
-    align-self: flex-end;
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
 }
 
 #lobby > .create > .content > .actions > .process {

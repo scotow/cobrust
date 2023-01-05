@@ -11,11 +11,13 @@ pub struct Config {
     pub foods: u16,
     pub food_strength: u16,
     pub reserved_food: bool,
+    pub perk_spacing: u16,
     pub reverser: bool,
     pub teleporter: bool,
 }
 
 impl Config {
+    // Read / written by client in the same order of the UI.
     pub fn from_raw(data: &[u8]) -> Option<Self> {
         let mut data = Cursor::new(data);
         let name_size = data.read_u16::<BE>().ok()?;
@@ -33,6 +35,7 @@ impl Config {
         let reserved_food = data.read_u8().ok()? > 0;
         let reverser = data.read_u8().ok()? > 0;
         let teleporter = data.read_u8().ok()? > 0;
+        let perk_spacing = data.read_u16::<BE>().ok()?;
 
         Some(Self {
             name,
@@ -41,6 +44,7 @@ impl Config {
             foods,
             food_strength,
             reserved_food,
+            perk_spacing,
             reverser,
             teleporter,
         })
@@ -53,5 +57,6 @@ impl Config {
             && (1..=50).contains(&self.speed)
             && (1..=32).contains(&self.foods)
             && (0..=1024).contains(&self.food_strength)
+            && (1..=128).contains(&self.perk_spacing)
     }
 }

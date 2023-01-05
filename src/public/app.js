@@ -22,12 +22,13 @@ class Lobby {
                 const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
                 const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
                 const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
+                const perkSpacing = Number(document.getElementById('create-perk-spacing').value);
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1 + 1 + 1);
+                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1 + 1 + 1 + 2);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
@@ -39,6 +40,7 @@ class Lobby {
                 data.writeUnsignedByte(reservedFood);
                 data.writeUnsignedByte(reverser);
                 data.writeUnsignedByte(teleporter);
+                data.writeUnsignedShort(perkSpacing);
                 this.socket.send(data.buffer);
             });
         });

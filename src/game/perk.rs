@@ -33,10 +33,11 @@ pub trait Perk: ToData {
 }
 
 pub struct Generator {
+    food_consumed: u16,
     food_strength: u16,
-    count: u8,
-    previous_consumer: Option<PlayerId>,
     reserved_food: bool,
+    previous_consumer: Option<PlayerId>,
+    perk_spacing: u16,
     enabled_perks_fn: Vec<fn(&Generator) -> Vec<Arc<dyn Perk + Sync + Send>>>,
 }
 
@@ -49,10 +50,11 @@ pub struct Generator {
 impl Generator {
     pub fn new(config: &Config) -> Self {
         Self {
+            food_consumed: 0,
             food_strength: config.food_strength,
-            count: 0,
-            previous_consumer: None,
             reserved_food: config.reserved_food,
+            previous_consumer: None,
+            perk_spacing: config.perk_spacing,
             enabled_perks_fn: ([
                 config.reverser.then_some(Generator::reverser),
                 config.teleporter.then_some(Generator::teleporter),
@@ -66,7 +68,7 @@ impl Generator {
 
     // Spread power spawn evenly (even if some are disabled). Vec<fn>?
     pub fn next(&mut self, consumer: PlayerId) -> Vec<Arc<dyn Perk + Sync + Send>> {
-        self.count = self.count.wrapping_add(1);
+        self.food_consumed = self.food_consumed.wrapping_add(1);
         let mut perks: Vec<Arc<dyn Perk + Sync + Send>> = Vec::with_capacity(3);
         perks.push(Arc::new(Food(self.food_strength)));
 
@@ -80,11 +82,11 @@ impl Generator {
                 self.previous_consumer = Some(consumer);
             }
         }
-        if !self.enabled_perks_fn.is_empty() && self.count % 4 == 0 {
-            perks.extend(self.enabled_perks_fn
-                [(self.count as usize / 4 + 1) % self.enabled_perks_fn.len()](
-                self
-            ));
+        if !self.enabled_perks_fn.is_empty() && self.food_consumed % self.perk_spacing == 0 {
+            perks.extend(
+                self.enabled_perks_fn[(self.food_consumed / self.perk_spacing + 1) as usize
+                    % self.enabled_perks_fn.len()](self),
+            );
         }
 
         perks
