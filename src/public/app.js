@@ -133,18 +133,22 @@ class LobbyGame {
 
         const size = document.createElement('div');
         size.classList.add('size', 'icon');
+        size.title = 'Grid size';
         size.innerText = `${info.size.width}x${info.size.height}`;
 
         const speed = document.createElement('div');
         speed.classList.add('speed', 'icon');
+        speed.title = 'Snakes speed';
         speed.innerText = String(info.speed);
 
         this.players = document.createElement('div');
         this.players.classList.add('players', 'icon');
+        this.players.title = 'Conntected players';
         this.players.innerText = String(info.playerCount);
 
         const join = document.createElement('div');
         join.classList.add('join');
+        join.title = 'Join game';
         join.addEventListener('click', () => {
             new Game(id);
         });
