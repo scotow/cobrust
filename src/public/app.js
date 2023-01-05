@@ -123,6 +123,9 @@ class LobbyGame {
     constructor(id, info) {
         this.game = document.createElement('div');
         this.game.classList.add('game');
+        this.game.addEventListener('dblclick', () => {
+            new Game(id);
+        });
 
         const name = document.createElement('div');
         name.classList.add('name');
