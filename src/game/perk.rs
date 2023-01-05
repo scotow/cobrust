@@ -37,14 +37,14 @@ pub struct Generator {
     count: u8,
     previous_consumer: Option<PlayerId>,
     reserved_food: bool,
-    reverser: bool,
-    teleporter: bool,
+    enabled_perks_fn: Vec<fn(&Generator) -> Vec<Arc<dyn Perk + Sync + Send>>>,
 }
 
 // Perk ideas:
 // - Invisible timer
 // - Mines spawn (random, behind tail, or head?), if person take 3 reserved foods in a row
 // - Frenzy: spawn N foods or reserved foods at once
+// - Multi snakes (like pinball)
 
 impl Generator {
     pub fn new(config: &Config) -> Self {
@@ -53,8 +53,14 @@ impl Generator {
             count: 0,
             previous_consumer: None,
             reserved_food: config.reserved_food,
-            reverser: config.reverser,
-            teleporter: config.teleporter,
+            enabled_perks_fn: ([
+                config.reverser.then_some(Generator::reverser),
+                config.teleporter.then_some(Generator::teleporter),
+            ]
+                as [Option<fn(&Generator) -> Vec<Arc<dyn Perk + Sync + Send>>>; 2])
+                .into_iter()
+                .flatten()
+                .collect(),
         }
     }
 
@@ -74,19 +80,11 @@ impl Generator {
                 self.previous_consumer = Some(consumer);
             }
         }
-        if self.reverser && self.count % 8 == 4 {
-            perks.push(Arc::new(Reverser));
-        }
-        if self.teleporter && self.count % 8 == 0 {
-            let (id_1, id_2) = (random(), random());
-            perks.push(Arc::new(Teleporter {
-                self_id: id_1,
-                dest_id: id_2,
-            }));
-            perks.push(Arc::new(Teleporter {
-                self_id: id_2,
-                dest_id: id_1,
-            }));
+        if !self.enabled_perks_fn.is_empty() && self.count % 4 == 0 {
+            perks.extend(self.enabled_perks_fn
+                [(self.count as usize / 4 + 1) % self.enabled_perks_fn.len()](
+                self
+            ));
         }
 
         perks
@@ -94,6 +92,24 @@ impl Generator {
 
     pub fn fresh_food(&self) -> Food {
         Food(self.food_strength)
+    }
+
+    fn reverser(&self) -> Vec<Arc<dyn Perk + Sync + Send>> {
+        vec![Arc::new(Reverser)]
+    }
+
+    fn teleporter(&self) -> Vec<Arc<dyn Perk + Sync + Send>> {
+        let (id_1, id_2) = (random(), random());
+        vec![
+            Arc::new(Teleporter {
+                self_id: id_1,
+                dest_id: id_2,
+            }),
+            Arc::new(Teleporter {
+                self_id: id_2,
+                dest_id: id_1,
+            }),
+        ]
     }
 }
 
