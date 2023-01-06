@@ -312,6 +312,7 @@ body.playing #game {
 
 #lobby > .create > .content > .settings > .section > .input.checkbox > .label {
     display: inline-block;
+    cursor: pointer;
 }
 
 #lobby > .create > .content > .settings > .section > .input.checkbox > input {
