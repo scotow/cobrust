@@ -414,6 +414,10 @@ body.playing #game {
     background: #e7820e;
 }
 
+#lobby > .rules > .content > .section > .perk > .color.speed-boost {
+    background: #e70ed9;
+}
+
 #lobby > .rules > .content > .section > .perk > .info {
     display: inline-block;
     font-size: 14px;

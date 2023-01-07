@@ -452,6 +452,9 @@ class Game {
             case 3:
                 this.context.fillStyle = '#e7820e';
                 break;
+            case 4:
+                this.context.fillStyle = '#e70ed9';
+                break;
             default: return;
         }
         this.context.beginPath();

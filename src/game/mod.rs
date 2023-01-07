@@ -19,6 +19,7 @@ use crate::game::{
     packet::SnakeChange,
     perk::{Generator, Perk},
     player::PlayerId,
+    speed::{GameTick, Speed},
 };
 
 pub mod cell;
@@ -29,6 +30,7 @@ pub mod packet;
 pub mod perk;
 pub mod player;
 pub mod size;
+mod speed;
 
 pub struct Game {
     pub name: String,
@@ -59,6 +61,7 @@ impl Game {
     }
 
     pub async fn run(&self) {
+        let mut game_tick = GameTick::Normal;
         loop {
             let mut inner = self.inner.lock().await;
             if inner.players.is_empty() {
@@ -68,9 +71,13 @@ impl Game {
                 drop(inner);
                 sleep(Duration::from_millis(500)).await;
             } else {
-                inner.walk_snakes(self.size).await;
+                let mut sleep_time = 1000 / self.speed as u64;
+                game_tick += inner.walk_snakes(self.size, Speed::from(game_tick)).await;
+                if matches!(game_tick, GameTick::SpedUp(_)) {
+                    sleep_time /= 2;
+                }
                 drop(inner);
-                sleep(Duration::from_millis(1000 / self.speed as u64)).await;
+                sleep(Duration::from_millis(sleep_time)).await;
             }
         }
     }
@@ -147,7 +154,7 @@ impl Game {
                 break;
             };
             match data[0] {
-                0 => player.lock().await.process(&data[1..]).await,
+                0 => player.lock().await.process_event(&data[1..]).await,
                 _ => break,
             }
         }
@@ -174,13 +181,13 @@ impl Inner {
     // - apply heads (queue respawns and perks consuming)
     // - process respawns
     // - consume perks
-    async fn walk_snakes(&mut self, size: Size) {
+    async fn walk_snakes(&mut self, size: Size, min_speed: Speed) -> Speed {
         let walks = join_all(self.players.iter().map(|(&id, p)| async move {
-            p.lock()
-                .await
-                .walk(size)
-                .await
-                .map(|cs| (id, Arc::clone(p), cs))
+            let mut lock = p.lock().await;
+            if lock.speed() < min_speed {
+                return None;
+            }
+            lock.walk(size).await.map(|cs| (id, Arc::clone(p), cs))
         }))
         .await
         .into_iter()
@@ -272,6 +279,16 @@ impl Inner {
         if !new_perks.is_empty() {
             self.broadcast_message(Packet::Perks(new_perks)).await;
         }
+
+        join_all(
+            self.players
+                .values()
+                .map(|p| async { p.lock().await.speed() }),
+        )
+        .await
+        .into_iter()
+        .max()
+        .unwrap_or(Speed::Normal)
     }
 
     fn safe_place(&self, size: Size) -> Coord {

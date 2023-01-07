@@ -15,6 +15,8 @@ use crate::{
     misc::PacketSerialize,
 };
 
+const SPEED_BOOST_DURATION: u16 = 100;
+
 #[derive(Clone)]
 pub struct Perk {
     group_id: u16,
@@ -58,6 +60,9 @@ impl Perk {
                     .await
                     .then_some(SnakeChange::AddCell(player_id, arrival))
             }
+            PerkKind::SpeedBoost => {
+                player.increase_speed(SPEED_BOOST_DURATION);
+            }
         }
         change
     }
@@ -83,6 +88,7 @@ enum PerkKind {
     ReservedFood { strength: u16, owner: PlayerId },
     Reverser,
     Teleporter,
+    SpeedBoost,
 }
 
 pub struct Generator {
@@ -111,7 +117,8 @@ impl Generator {
             enabled_perks_fn: ([
                 config.reverser.then_some(Generator::reverser),
                 config.teleporter.then_some(Generator::teleporter),
-            ] as [Option<fn(&Generator) -> Vec<Perk>>; 2])
+                Some(Generator::speed_boost),
+            ] as [Option<fn(&Generator) -> Vec<Perk>>; 3])
                 .into_iter()
                 .flatten()
                 .collect(),
@@ -153,5 +160,9 @@ impl Generator {
 
     fn teleporter(&self) -> Vec<Perk> {
         vec![Perk::new(PerkKind::Teleporter); 2]
+    }
+
+    fn speed_boost(&self) -> Vec<Perk> {
+        vec![Perk::new(PerkKind::SpeedBoost)]
     }
 }

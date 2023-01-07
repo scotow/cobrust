@@ -5,7 +5,7 @@ use futures::{stream::SplitSink, SinkExt};
 use rand::{thread_rng, Rng};
 use tokio::sync::Mutex;
 
-use crate::game::{coordinate::Coord, direction::Dir, size::Size};
+use crate::game::{coordinate::Coord, direction::Dir, size::Size, speed::Speed};
 
 const COLOR_GAP: u16 = 60;
 const START_SIZE: u16 = 9;
@@ -14,10 +14,11 @@ pub(super) type PlayerId = u16;
 
 #[derive(Debug)]
 pub struct Player {
+    pub color: (u16, u16),
     pub body: VecDeque<Coord>,
     direction: Mutex<Direction>,
     growth: u16,
-    pub color: (u16, u16),
+    speed: u16,
     sink: SplitSink<WebSocket, Message>,
 }
 
@@ -31,13 +32,14 @@ impl Player {
     pub fn new(head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
         let head_color = thread_rng().gen_range(0..360);
         Self {
-            body: VecDeque::from(vec![head]),
-            direction: Mutex::new(Direction::default()),
-            growth: START_SIZE,
             color: (
                 head_color,
                 head_color + COLOR_GAP + thread_rng().gen_range(0..360 - COLOR_GAP * 2),
             ),
+            body: VecDeque::from(vec![head]),
+            direction: Mutex::new(Direction::default()),
+            growth: START_SIZE,
+            speed: 0,
             sink: tx,
         }
     }
@@ -46,7 +48,7 @@ impl Player {
         let _ = self.sink.send(message).await;
     }
 
-    pub async fn process(&self, data: &[u8]) {
+    pub async fn process_event(&self, data: &[u8]) {
         let new = match Dir::try_from(data[0]) {
             Ok(dir) => dir,
             Err(_) => return,
@@ -86,12 +88,25 @@ impl Player {
         } else {
             Some(self.body.pop_back().unwrap())
         };
+        self.speed = self.speed.saturating_sub(1);
 
         Some((tail, new_head))
     }
 
     pub fn grow(&mut self, grow: u16) {
         self.growth += grow;
+    }
+
+    pub fn speed(&self) -> Speed {
+        if self.speed > 0 {
+            Speed::Fast
+        } else {
+            Speed::Normal
+        }
+    }
+
+    pub fn increase_speed(&mut self, duration: u16) {
+        self.speed += duration;
     }
 
     pub async fn respawn(&mut self, head: Coord) {
@@ -101,6 +116,7 @@ impl Player {
         direction.current = None;
         direction.queue.clear();
         self.growth = START_SIZE;
+        self.speed = 0;
     }
 
     pub async fn reverse(&mut self) {
