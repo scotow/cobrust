@@ -350,7 +350,7 @@ body.playing #game {
     padding: 12px;
 }
 
-#lobby > .rules > .content > .section {
+#lobby > .rules > .content > .section:nth-last-child(n+2) {
     margin-bottom: 20px;
 }
 
