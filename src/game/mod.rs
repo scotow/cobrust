@@ -22,14 +22,14 @@ use crate::game::{
     speed::{GameTick, Speed},
 };
 
-pub mod cell;
+mod cell;
 pub mod config;
-pub mod coordinate;
-pub mod direction;
-pub mod packet;
-pub mod perk;
-pub mod player;
-pub mod size;
+mod coordinate;
+mod direction;
+mod packet;
+mod perk;
+mod player;
+mod size;
 mod speed;
 
 pub struct Game {
