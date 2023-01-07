@@ -117,7 +117,7 @@ impl Generator {
             enabled_perks_fn: ([
                 config.reverser.then_some(Generator::reverser),
                 config.teleporter.then_some(Generator::teleporter),
-                Some(Generator::speed_boost),
+                config.speed_boost.then_some(Generator::speed_boost),
             ] as [Option<fn(&Generator) -> Vec<Perk>>; 3])
                 .into_iter()
                 .flatten()
