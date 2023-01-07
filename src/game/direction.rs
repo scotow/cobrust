@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::game::coordinate::Coord;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum Dir {
     Up,
     Down,

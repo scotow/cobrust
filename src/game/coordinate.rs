@@ -4,10 +4,10 @@ use rand::Rng;
 
 use crate::{
     game::{direction::Dir, size::Size},
-    misc::ToData,
+    misc::PacketSerialize,
 };
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub struct Coord {
     pub x: usize,
     pub y: usize,
@@ -48,7 +48,7 @@ impl Add<(Dir, Size)> for Coord {
     }
 }
 
-impl ToData for Coord {
+impl PacketSerialize for Coord {
     fn push(&self, out: &mut Vec<u8>) {
         (self.x as u16).push(out);
         (self.y as u16).push(out);

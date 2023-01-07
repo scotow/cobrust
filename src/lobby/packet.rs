@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::ws::Message;
 
-use crate::{game::Game, lobby::GameId, misc::ToData, packet};
+use crate::{game::Game, lobby::GameId, misc::PacketSerialize, packet};
 
 pub enum Packet<'a> {
     AddGames(Vec<(&'a GameId, &'a Arc<Game>)>),

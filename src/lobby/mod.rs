@@ -99,7 +99,7 @@ impl Lobby {
             .await;
         drop(inner);
 
-        game.play(socket).await;
+        game.join(socket).await;
         self.inner
             .lock()
             .await

@@ -47,7 +47,7 @@ impl Game {
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
-            inner.add_perk(config.size, Arc::new(inner.perk_generator.fresh_food()));
+            inner.add_perk(config.size, inner.perk_generator.fresh_food());
         }
 
         Self {
@@ -75,7 +75,7 @@ impl Game {
         }
     }
 
-    pub async fn play(&self, socket: WebSocket) {
+    pub async fn join(&self, socket: WebSocket) {
         let mut inner = self.inner.lock().await;
 
         let head = inner.safe_place(self.size);
@@ -113,7 +113,7 @@ impl Game {
         let perks = inner
             .perks
             .iter()
-            .map(|(c, p)| (*c, Arc::clone(p)))
+            .map(|(coord, perk)| (coord.clone(), perk.clone()))
             .collect::<Vec<_>>();
         player_lock.send(Packet::Perks(perks).message()).await;
         drop(player_lock);
@@ -162,7 +162,7 @@ impl Game {
 struct Inner {
     grid: Vec<Vec<Cell>>,
     players: HashMap<PlayerId, Arc<Mutex<Player>>>,
-    perks: HashMap<Coord, Arc<dyn Perk + Send + Sync>>,
+    perks: HashMap<Coord, Perk>,
     perk_generator: Generator,
     last_leave: Instant,
 }
@@ -208,27 +208,27 @@ impl Inner {
                 acc
             },
         );
-        for (id, player, (_removed, new)) in walks.iter() {
+        for (player_id, player, (_removed, new)) in walks.iter() {
             match &self.grid[new.y][new.x] {
                 Cell::Empty => {
                     if *collisions.get(new).unwrap() == 1 {
-                        self.grid[new.y][new.x] = Cell::Occupied(*id);
-                        changes.push(SnakeChange::AddCell(*id, *new));
+                        self.grid[new.y][new.x] = Cell::Occupied(*player_id);
+                        changes.push(SnakeChange::AddCell(*player_id, *new));
                     } else {
-                        need_respawn.push((*id, Arc::clone(player)));
+                        need_respawn.push((*player_id, Arc::clone(player)));
                     }
                 }
                 Cell::Occupied(_) => {
-                    need_respawn.push((*id, Arc::clone(player)));
+                    need_respawn.push((*player_id, Arc::clone(player)));
                 }
                 Cell::Perk(perk) => {
                     if *collisions.get(new).unwrap() == 1 {
-                        perk_consumed.push((*id, Arc::clone(player), Arc::clone(perk)));
-                        self.grid[new.y][new.x] = Cell::Occupied(*id);
+                        perk_consumed.push((*player_id, Arc::clone(player), perk.clone()));
+                        self.grid[new.y][new.x] = Cell::Occupied(*player_id);
                         self.perks.remove(new);
-                        changes.push(SnakeChange::AddCell(*id, *new));
+                        changes.push(SnakeChange::AddCell(*player_id, *new));
                     } else {
-                        need_respawn.push((*id, Arc::clone(player)));
+                        need_respawn.push((*player_id, Arc::clone(player)));
                     }
                 }
             }
@@ -260,7 +260,7 @@ impl Inner {
             }
             if perk.make_spawn_food() {
                 for perk in self.perk_generator.next(id) {
-                    let coord = self.add_perk(size, Arc::clone(&perk));
+                    let coord = self.add_perk(size, perk.clone());
                     new_perks.push((coord, perk));
                 }
             }
@@ -281,10 +281,10 @@ impl Inner {
             .unwrap()
     }
 
-    fn add_perk(&mut self, size: Size, perk: Arc<dyn Perk + Send + Sync>) -> Coord {
+    fn add_perk(&mut self, size: Size, perk: Perk) -> Coord {
         let coord = self.safe_place(size);
-        self.grid[coord.y][coord.x] = Cell::Perk(Arc::clone(&perk));
-        self.perks.insert(coord, Arc::clone(&perk));
+        self.grid[coord.y][coord.x] = Cell::Perk(perk.clone());
+        self.perks.insert(coord, perk);
         coord
     }
 

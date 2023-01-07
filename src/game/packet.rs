@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::extract::ws::Message;
 use tokio::sync::MutexGuard;
 
@@ -10,14 +8,14 @@ use crate::{
         player::{Player, PlayerId},
         size::Size,
     },
-    misc::ToData,
+    misc::PacketSerialize,
     packet,
 };
 
 pub enum Packet<'a> {
     Info(Size, &'a str, PlayerId),
     Snakes(Vec<(PlayerId, MutexGuard<'a, Player>)>),
-    Perks(Vec<(Coord, Arc<dyn Perk + Sync + Send>)>),
+    Perks(Vec<(Coord, Perk)>),
     PlayerJoined(PlayerId, Coord, (u16, u16)),
     PlayerLeft(PlayerId),
     SnakeChanges(Vec<SnakeChange>),

@@ -1,6 +1,6 @@
 [package]
 name = "cobrust"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Scotow <contact@scotow.com>"]
 edition = "2021"
 
@@ -8,6 +8,8 @@ edition = "2021"
 async-trait = "0.1.60"
 axum = { version = "0.6.1", features = ["ws"] }
 byteorder = "1.4.3"
+enum_index = "0.2.0"
+enum_index_derive = "0.2.0"
 env_logger = "0.10.0"
 futures = "0.3.25"
 rand = "0.8.5"
