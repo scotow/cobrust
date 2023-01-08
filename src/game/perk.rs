@@ -100,28 +100,30 @@ pub struct Generator {
     enabled_perks_fn: Vec<fn(&Generator) -> Vec<Perk>>,
 }
 
-// // Perk ideas:
-// // - Invisible timer
-// // - Mines spawn (random, behind tail, or head?), if person take 3 reserved foods in a row
-// // - Frenzy: spawn N foods or reserved foods at once
-// // - Multi snakes (like pinball)
+// Perk ideas:
+// - Invisible timer
+// - Mines spawn (random, behind tail, or head?), if person take 3 reserved foods in a row
+// - Frenzy: spawn N foods or reserved foods at once
+// - Multi snakes (like pinball)
 
 impl Generator {
     pub fn new(config: &Config) -> Self {
+        let mut enabled_perks_fn = ([
+            config.reverser.then_some(Generator::reverser),
+            config.teleporter.then_some(Generator::teleporter),
+            config.speed_boost.then_some(Generator::speed_boost),
+        ] as [Option<fn(&Generator) -> Vec<Perk>>; 3])
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        enabled_perks_fn.rotate_right(1);
         Self {
             food_consumed: 0,
             food_strength: config.food_strength,
             reserved_food: config.reserved_food,
             previous_consumer: None,
             perk_spacing: config.perk_spacing,
-            enabled_perks_fn: ([
-                config.reverser.then_some(Generator::reverser),
-                config.teleporter.then_some(Generator::teleporter),
-                config.speed_boost.then_some(Generator::speed_boost),
-            ] as [Option<fn(&Generator) -> Vec<Perk>>; 3])
-                .into_iter()
-                .flatten()
-                .collect(),
+            enabled_perks_fn,
         }
     }
 
@@ -140,11 +142,11 @@ impl Generator {
                 self.previous_consumer = Some(consumer);
             }
         }
+
         if !self.enabled_perks_fn.is_empty() && self.food_consumed % self.perk_spacing == 0 {
-            perks.extend(
-                self.enabled_perks_fn[(self.food_consumed / self.perk_spacing + 1) as usize
-                    % self.enabled_perks_fn.len()](self),
-            );
+            let next_perk_fn_idx =
+                (self.food_consumed / self.perk_spacing) as usize % self.enabled_perks_fn.len();
+            perks.extend(self.enabled_perks_fn[next_perk_fn_idx](self));
         }
 
         perks
