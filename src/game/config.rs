@@ -14,7 +14,7 @@ pub struct Config {
     pub perk_spacing: u16,
     pub reverser: bool,
     pub teleporter: bool,
-    pub speed_boost: bool,
+    pub speed_boost: Option<u16>,
 }
 
 impl Config {
@@ -36,7 +36,7 @@ impl Config {
         let reserved_food = data.read_u8().ok()? > 0;
         let reverser = data.read_u8().ok()? > 0;
         let teleporter = data.read_u8().ok()? > 0;
-        let speed_boost = data.read_u8().ok()? > 0;
+        let speed_boost = data.read_u16::<BE>().ok()?;
         let perk_spacing = data.read_u16::<BE>().ok()?;
 
         Some(Self {
@@ -49,7 +49,7 @@ impl Config {
             perk_spacing,
             reverser,
             teleporter,
-            speed_boost,
+            speed_boost: (speed_boost > 0).then_some(speed_boost),
         })
     }
 
@@ -61,5 +61,9 @@ impl Config {
             && (1..=32).contains(&self.foods)
             && (0..=1024).contains(&self.food_strength)
             && (1..=128).contains(&self.perk_spacing)
+            && self
+                .speed_boost
+                .map(|d| (5..=1000).contains(&d))
+                .unwrap_or(true)
     }
 }

@@ -22,14 +22,14 @@ class Lobby {
                 const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
                 const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
                 const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
-                const speedBoost = document.getElementById('create-speed-boost').checked ? 1 : 0;
+                const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
                 const perkSpacing = Number(document.getElementById('create-perk-spacing').value);
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
                 const nameSize = nameData.writeString(name);
 
-                const data = new ByteBuffer(1 + 2 + nameSize + 2 + 2 + 1 + 2 + 2 + 1 + 1 + 1 + 1 + 2);
+                const data = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
                 data.writeUnsignedByte(0);
                 data.writeUnsignedShort(nameSize);
                 data.write(nameData);
@@ -41,7 +41,7 @@ class Lobby {
                 data.writeUnsignedByte(reservedFood);
                 data.writeUnsignedByte(reverser);
                 data.writeUnsignedByte(teleporter);
-                data.writeUnsignedByte(speedBoost);
+                data.writeUnsignedShort(speedBoost);
                 data.writeUnsignedShort(perkSpacing);
                 this.socket.send(data.buffer);
             });
@@ -49,20 +49,31 @@ class Lobby {
     }
 
     setupEvents() {
-        function setProcessButtonState() {
-            document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
+        function updateForm() {
+            document.getElementById('create-speed-boost-duration-group').classList.toggle('hidden', !document.getElementById('create-speed-boost').checked);
+            document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.input:not(.hidden) > .validable')).every((elem) => elem.checkValidity()));
         }
 
         function createTabSelected() {
             const nameInput = document.getElementById('create-name');
-            console.log(nameInput.value);
             if (!nameInput.value) {
                 nameInput.value = `Game ${1000 + Math.floor(Math.random() * 8999)}`;
                 nameInput.select();
             }
             nameInput.focus();
-            setProcessButtonState();
+            updateForm();
         }
+
+        document.querySelectorAll('.validable').forEach((elem) => {
+            elem.addEventListener('change', updateForm);
+            elem.addEventListener('keyup', updateForm);
+        });
+
+        document.querySelectorAll('.toggle-other').forEach((elem) => {
+            elem.addEventListener('change', updateForm);
+        });
+
+        document.getElementById('tab-create').addEventListener('change', createTabSelected);
 
         document.querySelector('#lobby > .games > .content').addEventListener('click', () => {
             if (Object.keys(this.games).length === 0) {
@@ -70,13 +81,6 @@ class Lobby {
                 createTabSelected();
             }
         });
-
-        document.querySelectorAll('.validable').forEach((elem) => {
-            elem.addEventListener('change', setProcessButtonState);
-            elem.addEventListener('keyup', setProcessButtonState);
-        });
-
-        document.getElementById('tab-create').addEventListener('change', createTabSelected);
     }
 
     processMessage(data) {

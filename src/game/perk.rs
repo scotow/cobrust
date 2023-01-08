@@ -15,8 +15,6 @@ use crate::{
     misc::PacketSerialize,
 };
 
-const SPEED_BOOST_DURATION: u16 = 100;
-
 #[derive(Clone)]
 pub struct Perk {
     group_id: u16,
@@ -60,8 +58,8 @@ impl Perk {
                     .await
                     .then_some(SnakeChange::AddCell(player_id, arrival))
             }
-            PerkKind::SpeedBoost => {
-                player.increase_speed(SPEED_BOOST_DURATION);
+            PerkKind::SpeedBoost(duration) => {
+                player.increase_speed(duration);
             }
         }
         change
@@ -88,7 +86,7 @@ enum PerkKind {
     ReservedFood { strength: u16, owner: PlayerId },
     Reverser,
     Teleporter,
-    SpeedBoost,
+    SpeedBoost(u16),
 }
 
 pub struct Generator {
@@ -97,6 +95,7 @@ pub struct Generator {
     reserved_food: bool,
     previous_consumer: Option<PlayerId>,
     perk_spacing: u16,
+    speed_boost: Option<u16>,
     enabled_perks_fn: Vec<fn(&Generator) -> Vec<Perk>>,
 }
 
@@ -108,21 +107,31 @@ pub struct Generator {
 
 impl Generator {
     pub fn new(config: &Config) -> Self {
-        let mut enabled_perks_fn = ([
-            config.reverser.then_some(Generator::reverser),
-            config.teleporter.then_some(Generator::teleporter),
-            config.speed_boost.then_some(Generator::speed_boost),
-        ] as [Option<fn(&Generator) -> Vec<Perk>>; 3])
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>();
-        enabled_perks_fn.rotate_right(1);
+        let mut enabled_perks_fn = [
+            config
+                .reverser
+                .then_some(Generator::reverser as fn(&Generator) -> Vec<Perk>),
+            config
+                .teleporter
+                .then_some(Generator::teleporter as fn(&Generator) -> Vec<Perk>),
+            config
+                .speed_boost
+                .map(|_| Generator::speed_boost as fn(&Generator) -> Vec<Perk>),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+        if !enabled_perks_fn.is_empty() {
+            enabled_perks_fn.rotate_right(1);
+        }
+
         Self {
             food_consumed: 0,
             food_strength: config.food_strength,
             reserved_food: config.reserved_food,
             previous_consumer: None,
             perk_spacing: config.perk_spacing,
+            speed_boost: config.speed_boost,
             enabled_perks_fn,
         }
     }
@@ -165,6 +174,6 @@ impl Generator {
     }
 
     fn speed_boost(&self) -> Vec<Perk> {
-        vec![Perk::new(PerkKind::SpeedBoost)]
+        vec![Perk::new(PerkKind::SpeedBoost(self.speed_boost.unwrap()))]
     }
 }

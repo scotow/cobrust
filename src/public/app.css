@@ -266,6 +266,10 @@ body.playing #game {
     margin-top: 12px;
 }
 
+#lobby > .create > .content > .settings > .section > .input.hidden {
+    display: none !important;
+}
+
 #lobby > .create > .content > .settings > .section > .input > .label {
     margin-bottom: 2px;
     font-size: 12px;
@@ -295,6 +299,10 @@ body.playing #game {
     font-weight: bold;
 }
 
+#lobby > .create > .content > .settings > .section > .input.number > .label[title] {
+    cursor: help;
+}
+
 #lobby > .create > .content > .settings > .section > .input.number > input {
     width: 140px;
     padding: 8px 12px;
@@ -317,6 +325,7 @@ body.playing #game {
 
 #lobby > .create > .content > .settings > .section > .input.checkbox > input {
     margin-right: 6px;
+    cursor: pointer;
 }
 
 #lobby > .create > .content > .actions {

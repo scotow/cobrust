@@ -37,18 +37,18 @@
                                 <input id="create-height" class="validable" type="number" min="16" max="255" value="33" placeholder="16 - 255" required>
                             </div>
                             <div class="input number">
-                                <div class="label">Speed:</div>
+                                <div class="label" title="Blocks per second">Speed:</div>
                                 <input id="create-speed" class="validable" type="number" min="1" max="50" value="20" placeholder="1 - 50" required>
                             </div>
                         </div>
                         <div class="section">
                             <div class="title">Food</div>
                             <div class="input number">
-                                <div class="label">Count:</div>
+                                <div class="label" title="Simultaneous foods">Count:</div>
                                 <input id="create-foods" class="validable" type="number" min="1" max="32" value="1" placeholder="1 - 32" required>
                             </div>
                             <div class="input number">
-                                <div class="label">Strength:</div>
+                                <div class="label" title="Block growth per food">Strength:</div>
                                 <input id="create-food-strength" class="validable" type="number" min="0" max="1024" value="4" placeholder="0 - 1024" required>
                             </div>
                         </div>
@@ -67,13 +67,17 @@
                                 <label for="create-teleporter" class="label">Teleporter</label>
                             </div>
                             <div class="input checkbox">
-                                <input id="create-speed-boost" type="checkbox" checked>
+                                <input id="create-speed-boost" class="toggle-other" type="checkbox" checked>
                                 <label for="create-speed-boost" class="label">Speed boost</label>
                             </div>
                             <div class="spacing"></div>
                             <div class="input number">
-                                <div class="label">Spawn rate:</div>
+                                <div class="label" title="Number of foods eaten between perk spawns">Spawn rate:</div>
                                 <input id="create-perk-spacing" class="validable" type="number" min="1" max="128" value="4" placeholder="1 - 128" required>
+                            </div>
+                            <div id="create-speed-boost-duration-group" class="input number">
+                                <div class="label" title="Duration in number of blocks">Speed boost duration:</div>
+                                <input id="create-speed-boost-duration" class="validable" type="number" min="5" max="1000" value="100" placeholder="5 - 1000" required>
                             </div>
                         </div>
                     </div>
