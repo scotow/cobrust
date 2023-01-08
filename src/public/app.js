@@ -49,24 +49,34 @@ class Lobby {
     }
 
     setupEvents() {
+        function setProcessButtonState() {
+            document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
+        }
+
+        function createTabSelected() {
+            const nameInput = document.getElementById('create-name');
+            console.log(nameInput.value);
+            if (!nameInput.value) {
+                nameInput.value = `Game ${1000 + Math.floor(Math.random() * 8999)}`;
+                nameInput.select();
+            }
+            nameInput.focus();
+            setProcessButtonState();
+        }
+
         document.querySelector('#lobby > .games > .content').addEventListener('click', () => {
             if (Object.keys(this.games).length === 0) {
                 document.getElementById('tab-create').checked = true;
-                document.getElementById('create-name').focus();
+                createTabSelected();
             }
         });
 
         document.querySelectorAll('.validable').forEach((elem) => {
-            function setProcessButtonState() {
-                document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.validable')).every((elem) => elem.checkValidity()));
-            }
             elem.addEventListener('change', setProcessButtonState);
             elem.addEventListener('keyup', setProcessButtonState);
         });
 
-        document.getElementById('tab-create').addEventListener('change', () => {
-            document.getElementById('create-name').focus();
-        });
+        document.getElementById('tab-create').addEventListener('change', createTabSelected);
     }
 
     processMessage(data) {
