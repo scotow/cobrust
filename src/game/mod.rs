@@ -12,14 +12,15 @@ use futures::{future::join_all, stream::SplitStream, StreamExt};
 use packet::Packet;
 use player::Player;
 use size::Size;
-use tokio::{sync::Mutex, time::sleep};
+use tokio::sync::Mutex;
 
 use crate::game::{
     config::Config,
     packet::SnakeChange,
     perk::{Generator, Perk},
     player::PlayerId,
-    speed::{GameTick, Speed},
+    speed::Speed,
+    tick::TickManager,
 };
 
 mod cell;
@@ -31,6 +32,9 @@ mod perk;
 mod player;
 mod size;
 mod speed;
+mod tick;
+
+const EXIT_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub struct Game {
     pub name: String,
@@ -61,23 +65,21 @@ impl Game {
     }
 
     pub async fn run(&self) {
-        let mut game_tick = GameTick::Normal;
+        let mut tick_manager = TickManager::new(self.speed);
+        let mut allowed_to_walk = Speed::Normal;
+
         loop {
             let mut inner = self.inner.lock().await;
             if inner.players.is_empty() {
-                if inner.last_leave.elapsed() > Duration::from_secs(60) {
+                if inner.last_leave.elapsed() > EXIT_TIMEOUT {
                     break;
                 }
                 drop(inner);
-                sleep(Duration::from_millis(500)).await;
+                tick_manager.wait_for_join().await;
             } else {
-                let mut sleep_time = 1000 / self.speed as u64;
-                game_tick += inner.walk_snakes(self.size, Speed::from(game_tick)).await;
-                if matches!(game_tick, GameTick::SpedUp(_)) {
-                    sleep_time /= 2;
-                }
+                let fastest_snake = inner.walk_snakes(self.size, allowed_to_walk).await;
                 drop(inner);
-                sleep(Duration::from_millis(sleep_time)).await;
+                allowed_to_walk = tick_manager.sleep(fastest_snake).await;
             }
         }
     }
@@ -181,13 +183,13 @@ impl Inner {
     // - apply heads (queue respawns and perks consuming)
     // - process respawns
     // - consume perks
-    async fn walk_snakes(&mut self, size: Size, min_speed: Speed) -> Speed {
+    async fn walk_snakes(&mut self, size: Size, allowed_to_walk: Speed) -> Speed {
         let walks = join_all(self.players.iter().map(|(&id, p)| async move {
-            let mut lock = p.lock().await;
-            if lock.speed() < min_speed {
+            let mut player = p.lock().await;
+            if player.speed() < allowed_to_walk {
                 return None;
             }
-            lock.walk(size).await.map(|cs| (id, Arc::clone(p), cs))
+            player.walk(size).await.map(|cs| (id, Arc::clone(p), cs))
         }))
         .await
         .into_iter()
