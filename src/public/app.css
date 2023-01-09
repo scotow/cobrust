@@ -250,6 +250,7 @@ body.playing #game {
 
 #lobby > .create > .content {
     padding: 12px;
+    line-height: 1;
 }
 
 #lobby > .create > .content > .settings > .section:nth-last-child(n+2) {
@@ -357,6 +358,7 @@ body.playing #game {
 
 #lobby > .rules > .content {
     padding: 12px;
+    line-height: 1;
 }
 
 #lobby > .rules > .content > .section:nth-last-child(n+2) {
