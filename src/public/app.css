@@ -63,7 +63,7 @@ body.playing #game {
     width: 90%;
     max-width: 700px;
     height: 90%;
-    max-height: 440px;
+    max-height: 450px;
     transform: translate(-50%, -50%);
 }
 
@@ -427,6 +427,10 @@ body.playing #game {
 
 #lobby > .rules > .content > .section > .perk > .color.speed-boost {
     background: #e70ed9;
+}
+
+#lobby > .rules > .content > .section > .perk > .color.food-frenzy {
+    background: #9e59ff;
 }
 
 #lobby > .rules > .content > .section > .perk > .info {

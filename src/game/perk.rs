@@ -34,10 +34,11 @@ impl Perk {
         player_id: PlayerId,
         player: &mut Player,
         perks: &HashMap<Coord, Perk>,
-    ) -> Option<SnakeChange> {
+    ) -> (Option<SnakeChange>, Vec<Perk>) {
         let mut change = None;
+        let mut generated_perks = Vec::new();
         match self.kind {
-            PerkKind::Food(strength) => player.grow(strength),
+            PerkKind::Food(strength, _) => player.grow(strength),
             PerkKind::ReservedFood { strength, owner } => {
                 if owner == player_id {
                     player.grow(strength);
@@ -48,25 +49,36 @@ impl Perk {
                 change = Some(SnakeChange::Reverse(player_id));
             }
             PerkKind::Teleporter => {
-                let departure = *player.body.front()?;
-                let arrival = *perks
-                    .iter()
-                    .find(|(&coord, perk)| perk.group_id == self.group_id && coord != departure)?
-                    .0;
-                change = player
-                    .teleport(arrival)
-                    .await
-                    .then_some(SnakeChange::AddCell(player_id, arrival))
+                change = async {
+                    let departure = *player.body.front()?;
+                    let arrival = *perks
+                        .iter()
+                        .find(|(&coord, perk)| {
+                            perk.group_id == self.group_id && coord != departure
+                        })?
+                        .0;
+                    player
+                        .teleport(arrival)
+                        .await
+                        .then_some(SnakeChange::AddCell(player_id, arrival))
+                }
+                .await;
             }
             PerkKind::SpeedBoost(duration) => {
                 player.increase_speed(duration);
             }
+            PerkKind::FoodFrenzy { count, strength } => {
+                generated_perks.extend(vec![
+                    Perk::new(PerkKind::Food(strength, false));
+                    count as usize
+                ]);
+            }
         }
-        change
+        (change, generated_perks)
     }
 
-    pub fn make_spawn_food(&self) -> bool {
-        matches!(self.kind, PerkKind::Food(_))
+    pub fn makes_spawn_food(&self) -> bool {
+        matches!(self.kind, PerkKind::Food(_, true))
     }
 }
 
@@ -82,11 +94,12 @@ impl PacketSerialize for Perk {
 
 #[derive(EnumIndex, Clone)]
 enum PerkKind {
-    Food(u16),
+    Food(u16, bool),
     ReservedFood { strength: u16, owner: PlayerId },
     Reverser,
     Teleporter,
     SpeedBoost(u16),
+    FoodFrenzy { count: u8, strength: u16 },
 }
 
 pub struct Generator {
@@ -96,27 +109,32 @@ pub struct Generator {
     previous_consumer: Option<PlayerId>,
     perk_spacing: u16,
     speed_boost: Option<u16>,
+    food_frenzy: Option<u8>,
     enabled_perks_fn: Vec<fn(&Generator) -> Vec<Perk>>,
 }
 
 // Perk ideas:
 // - Invisible timer
 // - Mines spawn (random, behind tail, or head?), if person take 3 reserved foods in a row
-// - Frenzy: spawn N foods or reserved foods at once
 // - Multi snakes (like pinball)
+
+type PerkGeneratorFn = fn(&Generator) -> Vec<Perk>;
 
 impl Generator {
     pub fn new(config: &Config) -> Self {
         let mut enabled_perks_fn = [
             config
                 .reverser
-                .then_some(Generator::reverser as fn(&Generator) -> Vec<Perk>),
+                .then_some(Generator::reverser as PerkGeneratorFn),
             config
                 .teleporter
-                .then_some(Generator::teleporter as fn(&Generator) -> Vec<Perk>),
+                .then_some(Generator::teleporter as PerkGeneratorFn),
             config
                 .speed_boost
-                .map(|_| Generator::speed_boost as fn(&Generator) -> Vec<Perk>),
+                .map(|_| Generator::speed_boost as PerkGeneratorFn),
+            config
+                .food_frenzy
+                .map(|_| Generator::food_frenzy as PerkGeneratorFn),
         ]
         .into_iter()
         .flatten()
@@ -132,6 +150,7 @@ impl Generator {
             previous_consumer: None,
             perk_spacing: config.perk_spacing,
             speed_boost: config.speed_boost,
+            food_frenzy: config.food_frenzy,
             enabled_perks_fn,
         }
     }
@@ -139,7 +158,7 @@ impl Generator {
     pub fn next(&mut self, consumer: PlayerId) -> Vec<Perk> {
         self.food_consumed = self.food_consumed.wrapping_add(1);
         let mut perks = Vec::with_capacity(3);
-        perks.push(Perk::new(PerkKind::Food(self.food_strength)));
+        perks.push(self.respawnable_food());
 
         if self.reserved_food {
             if self.previous_consumer.take() == Some(consumer) {
@@ -161,8 +180,8 @@ impl Generator {
         perks
     }
 
-    pub fn fresh_food(&self) -> Perk {
-        Perk::new(PerkKind::Food(self.food_strength))
+    pub fn respawnable_food(&self) -> Perk {
+        Perk::new(PerkKind::Food(self.food_strength, true))
     }
 
     fn reverser(&self) -> Vec<Perk> {
@@ -175,5 +194,12 @@ impl Generator {
 
     fn speed_boost(&self) -> Vec<Perk> {
         vec![Perk::new(PerkKind::SpeedBoost(self.speed_boost.unwrap()))]
+    }
+
+    fn food_frenzy(&self) -> Vec<Perk> {
+        vec![Perk::new(PerkKind::FoodFrenzy {
+            count: self.food_frenzy.unwrap(),
+            strength: self.food_strength,
+        })]
     }
 }

@@ -23,6 +23,7 @@ class Lobby {
                 const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
                 const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
                 const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
+                const foodFrenzy = document.getElementById('create-food-frenzy').checked ? Number(document.getElementById('create-food-frenzy-count').value) : 0;
                 const perkSpacing = Number(document.getElementById('create-perk-spacing').value);
 
                 const nameData = new ByteBuffer();
@@ -42,6 +43,7 @@ class Lobby {
                 data.writeUnsignedByte(reverser);
                 data.writeUnsignedByte(teleporter);
                 data.writeUnsignedShort(speedBoost);
+                data.writeUnsignedByte(foodFrenzy);
                 data.writeUnsignedShort(perkSpacing);
                 this.socket.send(data.buffer);
             });
@@ -51,6 +53,7 @@ class Lobby {
     setupEvents() {
         function updateForm() {
             document.getElementById('create-speed-boost-duration-group').classList.toggle('hidden', !document.getElementById('create-speed-boost').checked);
+            document.getElementById('create-food-frenzy-count-group').classList.toggle('hidden', !document.getElementById('create-food-frenzy').checked);
             document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.input:not(.hidden) > .validable')).every((elem) => elem.checkValidity()));
         }
 
@@ -488,6 +491,9 @@ class Game {
                 break;
             case 4:
                 this.context.fillStyle = '#e70ed9';
+                break;
+            case 5:
+                this.context.fillStyle = '#9e59ff';
                 break;
             default: return;
         }

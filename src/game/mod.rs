@@ -53,7 +53,7 @@ impl Game {
             last_leave: Instant::now(),
         };
         for _ in 0..(config.foods as usize) {
-            inner.add_perk(config.size, inner.perk_generator.fresh_food());
+            inner.add_perk(config.size, inner.perk_generator.respawnable_food());
         }
 
         Self {
@@ -220,7 +220,7 @@ impl Inner {
         for (player_id, player, (_removed, new)) in walks.iter() {
             match &self.grid[new.y][new.x] {
                 Cell::Empty => {
-                    if *collisions.get(new).unwrap() == 1 {
+                    if collisions[&new] == 1 {
                         self.grid[new.y][new.x] = Cell::Occupied(*player_id);
                         changes.push(SnakeChange::AddCell(*player_id, *new));
                     } else {
@@ -231,7 +231,7 @@ impl Inner {
                     need_respawn.push((*player_id, Arc::clone(player)));
                 }
                 Cell::Perk(perk) => {
-                    if *collisions.get(new).unwrap() == 1 {
+                    if collisions[&new] == 1 {
                         perk_consumed.push((*player_id, Arc::clone(player), perk.clone()));
                         self.grid[new.y][new.x] = Cell::Occupied(*player_id);
                         self.perks.remove(new);
@@ -257,17 +257,23 @@ impl Inner {
             changes.push(SnakeChange::Die(id, head));
         }
         for (id, player, perk) in perk_consumed {
-            if let Some(additional_change) = perk
+            let (additional_change, additional_perks) = perk
                 .consume(id, &mut *player.lock().await, &self.perks)
-                .await
-            {
-                if let SnakeChange::AddCell(id, coord) = additional_change {
+                .await;
+
+            if let Some(change) = additional_change {
+                if let SnakeChange::AddCell(id, coord) = change {
                     self.grid[coord.y][coord.x] = Cell::Occupied(id);
                     self.perks.remove(&coord);
                 }
-                changes.push(additional_change);
+                changes.push(change);
             }
-            if perk.make_spawn_food() {
+            for perk in additional_perks {
+                let coord = self.add_perk(size, perk.clone());
+                new_perks.push((coord, perk));
+            }
+
+            if perk.makes_spawn_food() {
                 for perk in self.perk_generator.next(id) {
                     let coord = self.add_perk(size, perk.clone());
                     new_perks.push((coord, perk));

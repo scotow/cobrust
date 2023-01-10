@@ -69,6 +69,10 @@
                                 <input id="create-speed-boost" class="toggle-other" type="checkbox" checked>
                                 <label for="create-speed-boost" class="label">Speed boost</label>
                             </div>
+                            <div class="input checkbox">
+                                <input id="create-food-frenzy" class="toggle-other" type="checkbox" checked>
+                                <label for="create-food-frenzy" class="label">Food frenzy</label>
+                            </div>
                             <div class="spacing"></div>
                             <div class="input number">
                                 <div class="label" title="Number of foods eaten between perk spawns">Spawn rate:</div>
@@ -77,6 +81,10 @@
                             <div id="create-speed-boost-duration-group" class="input number">
                                 <div class="label" title="Duration in number of blocks">Speed boost duration:</div>
                                 <input id="create-speed-boost-duration" class="validable" type="number" min="5" max="1000" value="100" placeholder="5 - 1000" required>
+                            </div>
+                            <div id="create-food-frenzy-count-group" class="input number">
+                                <div class="label" title="Number of foods to spawn">Food frenzy count:</div>
+                                <input id="create-food-frenzy-count" class="validable" type="number" min="2" max="64" value="8" placeholder="2 - 64" required>
                             </div>
                         </div>
                     </div>
@@ -125,10 +133,14 @@
                             <div class="color speed-boost"></div>
                             <div class="info">Speed boost, take it to temporary double your speed.</div>
                         </div>
+                        <div class="perk">
+                            <div class="color food-frenzy"></div>
+                            <div class="info">Food frenzy, take it to spawn a ton of foods.</div>
+                        </div>
                     </div>
                     <div class="section">
                         <div class="title">Tips</div>
-                        <div class="text">While in the lobby, double click a game to join.</div>
+                        <div class="text">While in the lobby, double-click a game to join.</div>
                     </div>
                 </div>
             </section>
