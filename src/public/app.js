@@ -192,8 +192,20 @@ class Game {
 
             this.keyEventHandler = (event) => {
                 this.processKey(event);
-            }
+            };
+            this.swipeStartEventHandler = (event) => {
+                this.touch = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+            };
+            this.swipeEndEventHandler = (event) => {
+                this.processSwipe(
+                    event.changedTouches[0].clientX - this.touch.x,
+                    event.changedTouches[0].clientY - this.touch.y,
+                );
+            };
+
             window.addEventListener('keydown', this.keyEventHandler);
+            window.addEventListener('touchstart', this.swipeStartEventHandler);
+            window.addEventListener('touchend', this.swipeEndEventHandler);
         });
     }
 
@@ -218,6 +230,10 @@ class Game {
                 this.snakeChanges(data);
                 break;
         }
+    }
+
+    processSwipe(x, y) {
+        this.socket.send(new Uint8Array([0, Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : (y < 0 ? 0 : 1)]));
     }
 
     processKey(event) {
@@ -292,6 +308,8 @@ class Game {
             this.socket.close();
             window.removeEventListener('resize', this.resizeHandler);
             window.removeEventListener('keydown', this.keyEventHandler);
+            window.removeEventListener('touchstart', this.swipeStartEventHandler);
+            window.removeEventListener('touchend', this.swipeEndEventHandler);
 
             document.body.classList.replace('playing', 'lobbying');
             const game = document.getElementById('game');
