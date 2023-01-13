@@ -90,7 +90,7 @@ impl Game {
         let head = inner.safe_place(self.size);
         let (tx, rx) = socket.split();
         let id = rand::random();
-        let mut player = Player::new(head, tx);
+        let mut player = Player::new(id, head, tx);
         let color = player.color;
         player
             .send(Packet::Info(self.size, &self.name, id).message())
@@ -140,7 +140,7 @@ impl Game {
             .await
             .body
             .iter()
-            .for_each(|&c| inner.grid[c.y][c.x] = Cell::Empty);
+            .for_each(|c| inner.grid[c.coord.y][c.coord.x] = Cell::Empty);
         inner.last_leave = Instant::now();
         inner.broadcast_message(Packet::PlayerLeft(id)).await;
     }
@@ -181,8 +181,8 @@ impl Inner {
     // - free all tails
     // - group next heads by coord
     // - apply heads (queue respawns and perks consuming)
-    // - process respawns
     // - consume perks
+    // - process respawns
     async fn walk_snakes(&mut self, size: Size, allowed_to_walk: Speed) -> Speed {
         let walks = join_all(self.players.iter().map(|(&id, p)| async move {
             let mut player = p.lock().await;
@@ -204,12 +204,17 @@ impl Inner {
         // Free all tails.
         for (id, _player, (removed, _new)) in walks.iter() {
             if let Some(removed) = removed {
-                self.grid[removed.y][removed.x] = Cell::Empty;
+                self.grid[removed.coord.y][removed.coord.x] = Cell::Empty;
                 changes.push(SnakeChange::RemoveTail(*id));
+                if let Some(perk) = &removed.perk {
+                    self.grid[removed.coord.y][removed.coord.x] = Cell::Perk(perk.clone());
+                    self.perks.insert(removed.coord, perk.clone());
+                    new_perks.push((removed.coord, perk.clone()));
+                }
             }
         }
 
-        // Create new heads, handle collisions and apply perks.
+        // Create new heads, handle collisions and queue perks consumption.
         let collisions = walks.iter().fold(
             HashMap::with_capacity(walks.len()),
             |mut acc, (_, _, (_, new))| {
@@ -224,11 +229,11 @@ impl Inner {
                         self.grid[new.y][new.x] = Cell::Occupied(*player_id);
                         changes.push(SnakeChange::AddCell(*player_id, *new));
                     } else {
-                        need_respawn.push((*player_id, Arc::clone(player)));
+                        need_respawn.push((Arc::clone(player), false));
                     }
                 }
                 Cell::Occupied(_) => {
-                    need_respawn.push((*player_id, Arc::clone(player)));
+                    need_respawn.push((Arc::clone(player), false));
                 }
                 Cell::Perk(perk) => {
                     if collisions[&new] == 1 {
@@ -237,40 +242,31 @@ impl Inner {
                         self.perks.remove(new);
                         changes.push(SnakeChange::AddCell(*player_id, *new));
                     } else {
-                        need_respawn.push((*player_id, Arc::clone(player)));
+                        need_respawn.push((Arc::clone(player), false));
                     }
                 }
             }
         }
 
-        // Process respawns and generate perks.
-        for (id, player) in need_respawn {
-            let mut player = player.lock().await;
-            player
-                .body
-                .iter()
-                .skip(1)
-                .for_each(|&c| self.grid[c.y][c.x] = Cell::Empty);
-            let head = self.safe_place(size);
-            player.respawn(head).await;
-            self.grid[head.y][head.x] = Cell::Occupied(id);
-            changes.push(SnakeChange::Die(id, head));
-        }
+        // Consume perks and process respawns.
         for (id, player, perk) in perk_consumed {
-            let (additional_change, additional_perks) = perk
+            let consumption = perk
                 .consume(id, &mut *player.lock().await, &self.perks)
                 .await;
 
-            if let Some(change) = additional_change {
+            if let Some(change) = consumption.snake_change {
                 if let SnakeChange::AddCell(id, coord) = change {
                     self.grid[coord.y][coord.x] = Cell::Occupied(id);
                     self.perks.remove(&coord);
                 }
                 changes.push(change);
             }
-            for perk in additional_perks {
+            for perk in consumption.additional_perks {
                 let coord = self.add_perk(size, perk.clone());
                 new_perks.push((coord, perk));
+            }
+            if consumption.should_die {
+                need_respawn.push((player, true));
             }
 
             if perk.makes_spawn_food() {
@@ -279,6 +275,10 @@ impl Inner {
                     new_perks.push((coord, perk));
                 }
             }
+        }
+        for (player, clear_head) in need_respawn {
+            let mut player = player.lock().await;
+            changes.push(self.respawn_player(&mut player, clear_head, size).await);
         }
 
         if !changes.is_empty() {
@@ -311,6 +311,23 @@ impl Inner {
         self.grid[coord.y][coord.x] = Cell::Perk(perk.clone());
         self.perks.insert(coord, perk);
         coord
+    }
+
+    async fn respawn_player(
+        &mut self,
+        player: &mut Player,
+        clear_head: bool,
+        size: Size,
+    ) -> SnakeChange {
+        player
+            .body
+            .iter()
+            .skip(!clear_head as usize)
+            .for_each(|c| self.grid[c.coord.y][c.coord.x] = Cell::Empty);
+        let head = self.safe_place(size);
+        player.respawn(head).await;
+        self.grid[head.y][head.x] = Cell::Occupied(player.id);
+        SnakeChange::Die(player.id, head)
     }
 
     async fn broadcast_message(&self, packet: Packet<'_>) {

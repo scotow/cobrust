@@ -5,41 +5,92 @@ use futures::{stream::SplitSink, SinkExt};
 use rand::{thread_rng, Rng};
 use tokio::sync::Mutex;
 
-use crate::game::{coordinate::Coord, direction::Dir, size::Size, speed::Speed};
+use crate::game::{coordinate::Coord, direction::Dir, perk::Perk, size::Size, speed::Speed};
 
 const COLOR_GAP: u16 = 60;
 const START_SIZE: u16 = 9;
+const TRAIL_PERK_SPACING: u16 = 10;
 
 pub(super) type PlayerId = u16;
 
 #[derive(Debug)]
 pub struct Player {
+    pub id: PlayerId,
     pub color: (u16, u16),
-    pub body: VecDeque<Coord>,
+    pub body: VecDeque<BodyCell>,
     direction: Mutex<Direction>,
     growth: u16,
     speed: u16,
+    perk_trail: PerkTrail,
     sink: SplitSink<WebSocket, Message>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default, Debug)]
 struct Direction {
     current: Option<Dir>,
     queue: VecDeque<Dir>,
 }
 
+#[derive(Debug)]
+pub struct BodyCell {
+    pub coord: Coord,
+    pub perk: Option<Perk>,
+}
+
+#[derive(Debug)]
+struct PerkTrail {
+    remaining: u16,
+    until_next: u16,
+}
+
+impl PerkTrail {
+    fn empty() -> Self {
+        Self {
+            remaining: 0,
+            until_next: TRAIL_PERK_SPACING,
+        }
+    }
+
+    fn add_mines(&mut self, count: u16) {
+        self.remaining += count;
+    }
+
+    fn next(&mut self, owner: PlayerId) -> Option<Perk> {
+        if self.remaining > 0 {
+            if self.until_next == 0 {
+                self.remaining -= 1;
+                self.until_next = TRAIL_PERK_SPACING;
+                Some(Perk::new_mine(owner))
+            } else {
+                self.until_next -= 1;
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
+impl BodyCell {
+    fn without_perk(coord: Coord) -> Self {
+        Self { coord, perk: None }
+    }
+}
+
 impl Player {
-    pub fn new(head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
+    pub fn new(id: PlayerId, head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
         let head_color = thread_rng().gen_range(0..360);
         Self {
+            id,
             color: (
                 head_color,
                 head_color + COLOR_GAP + thread_rng().gen_range(0..360 - COLOR_GAP * 2),
             ),
-            body: VecDeque::from(vec![head]),
+            body: VecDeque::from([BodyCell::without_perk(head)]),
             direction: Mutex::new(Direction::default()),
             growth: START_SIZE,
             speed: 0,
+            perk_trail: PerkTrail::empty(),
             sink: tx,
         }
     }
@@ -65,7 +116,7 @@ impl Player {
         }
     }
 
-    pub async fn walk(&mut self, grid_size: Size) -> Option<(Option<Coord>, Coord)> {
+    pub async fn walk(&mut self, grid_size: Size) -> Option<(Option<BodyCell>, Coord)> {
         let mut direction = self.direction.lock().await;
         let new_direction = if !direction.queue.is_empty() {
             let dir = direction.queue.pop_front().unwrap();
@@ -78,9 +129,12 @@ impl Player {
             }
         };
 
-        let current_head = *self.body.get(0).unwrap();
-        let new_head = current_head + (new_direction, grid_size);
-        self.body.push_front(new_head);
+        let current_head_coord = self.body.get(0).unwrap().coord;
+        let new_head_coord = current_head_coord + (new_direction, grid_size);
+        self.body.push_front(BodyCell {
+            coord: new_head_coord,
+            perk: self.perk_trail.next(self.id),
+        });
 
         let tail = if self.growth >= 1 {
             self.growth -= 1;
@@ -90,7 +144,7 @@ impl Player {
         };
         self.speed = self.speed.saturating_sub(1);
 
-        Some((tail, new_head))
+        Some((tail, new_head_coord))
     }
 
     pub fn grow(&mut self, grow: u16) {
@@ -109,9 +163,13 @@ impl Player {
         self.speed += duration;
     }
 
+    pub fn increase_mines_count(&mut self, count: u16) {
+        self.perk_trail.add_mines(count);
+    }
+
     pub async fn respawn(&mut self, head: Coord) {
         self.body.clear();
-        self.body.push_front(head);
+        self.body.push_front(BodyCell::without_perk(head));
         let mut direction = self.direction.lock().await;
         direction.current = None;
         direction.queue.clear();
@@ -122,8 +180,8 @@ impl Player {
     pub async fn reverse(&mut self) {
         self.body.make_contiguous().reverse();
         let mut direction = self.direction.lock().await;
-        if let (Some(&head), Some(&body)) = (self.body.get(0), self.body.get(1)) {
-            direction.current = Some(Dir::from((head, body)));
+        if let (Some(head), Some(body)) = (self.body.get(0), self.body.get(1)) {
+            direction.current = Some(Dir::from((head.coord, body.coord)));
         } else {
             direction.current = None;
         }
@@ -134,7 +192,7 @@ impl Player {
         if self.direction.lock().await.current.is_none() {
             return false;
         }
-        self.body.push_front(coord);
+        self.body.push_front(BodyCell::without_perk(coord));
         true
     }
 }

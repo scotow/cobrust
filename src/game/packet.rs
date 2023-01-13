@@ -37,8 +37,8 @@ impl<'a> Packet<'a> {
                 let mut packet = packet![cap players.len() * 64; 1u8];
                 for (id, player) in players {
                     packet![packet; id, player.color.0, player.color.1, player.body.len() as u16];
-                    for coord in &player.body {
-                        packet![packet; coord];
+                    for cell in &player.body {
+                        packet![packet; cell.coord];
                     }
                 }
                 packet
@@ -77,6 +77,7 @@ impl<'a> Packet<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum SnakeChange {
     AddCell(PlayerId, Coord),
     RemoveTail(PlayerId),

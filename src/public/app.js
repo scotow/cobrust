@@ -24,6 +24,7 @@ class Lobby {
                 const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
                 const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
                 const foodFrenzy = document.getElementById('create-food-frenzy').checked ? Number(document.getElementById('create-food-frenzy-count').value) : 0;
+                const minesTrail = document.getElementById('create-mines-trail').checked ? Number(document.getElementById('create-mines-trail-count').value) : 0;
                 const perkSpacing = Number(document.getElementById('create-perk-spacing').value);
 
                 const nameData = new ByteBuffer();
@@ -44,6 +45,7 @@ class Lobby {
                 data.writeUnsignedByte(teleporter);
                 data.writeUnsignedShort(speedBoost);
                 data.writeUnsignedByte(foodFrenzy);
+                data.writeUnsignedByte(minesTrail);
                 data.writeUnsignedShort(perkSpacing);
                 this.socket.send(data.buffer);
             });
@@ -54,6 +56,7 @@ class Lobby {
         function updateForm() {
             document.getElementById('create-speed-boost-duration-group').classList.toggle('hidden', !document.getElementById('create-speed-boost').checked);
             document.getElementById('create-food-frenzy-count-group').classList.toggle('hidden', !document.getElementById('create-food-frenzy').checked);
+            document.getElementById('create-mines-trail-count-group').classList.toggle('hidden', !document.getElementById('create-mines-trail').checked);
             document.querySelector('#lobby > .create > .content > .actions > .process').classList.toggle('disabled', !Array.from(document.querySelectorAll('.input:not(.hidden) > .validable')).every((elem) => elem.checkValidity()));
         }
 
@@ -453,6 +456,7 @@ class Game {
             const perk = { coord, id };
             switch (id) {
                 case 1:
+                case 7:
                     perk.owner = data.readUnsignedShort();
                     break;
             }
@@ -494,6 +498,12 @@ class Game {
                 break;
             case 5:
                 this.context.fillStyle = '#9e59ff';
+                break;
+            case 6:
+                this.context.fillStyle = '#614343';
+                break;
+            case 7:
+                this.context.fillStyle = perk.owner === this.selfId ? '#6b0000' : '#f00000';
                 break;
             default: return;
         }

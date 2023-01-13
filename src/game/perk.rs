@@ -15,7 +15,7 @@ use crate::{
     misc::PacketSerialize,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Perk {
     group_id: u16,
     kind: PerkKind,
@@ -29,14 +29,17 @@ impl Perk {
         }
     }
 
+    pub fn new_mine(owner: PlayerId) -> Self {
+        Self::new(PerkKind::Mine(owner))
+    }
+
     pub async fn consume(
         &self,
         player_id: PlayerId,
         player: &mut Player,
         perks: &HashMap<Coord, Perk>,
-    ) -> (Option<SnakeChange>, Vec<Perk>) {
-        let mut change = None;
-        let mut generated_perks = Vec::new();
+    ) -> PerkConsumption {
+        let mut consumption = PerkConsumption::default();
         match self.kind {
             PerkKind::Food(strength, _) => player.grow(strength),
             PerkKind::ReservedFood { strength, owner } => {
@@ -46,11 +49,11 @@ impl Perk {
             }
             PerkKind::Reverser => {
                 player.reverse().await;
-                change = Some(SnakeChange::Reverse(player_id));
+                consumption.snake_change = Some(SnakeChange::Reverse(player_id));
             }
             PerkKind::Teleporter => {
-                change = async {
-                    let departure = *player.body.front()?;
+                consumption.snake_change = async {
+                    let departure = player.body.front()?.coord;
                     let arrival = *perks
                         .iter()
                         .find(|(&coord, perk)| {
@@ -68,13 +71,21 @@ impl Perk {
                 player.increase_speed(duration);
             }
             PerkKind::FoodFrenzy { count, strength } => {
-                generated_perks.extend(vec![
+                consumption.additional_perks.extend(vec![
                     Perk::new(PerkKind::Food(strength, false));
                     count as usize
                 ]);
             }
+            PerkKind::MinesTrail(count) => {
+                player.increase_mines_count(count as u16);
+            }
+            PerkKind::Mine(owner) => {
+                if owner != player_id {
+                    consumption.should_die = true;
+                }
+            }
         }
-        (change, generated_perks)
+        consumption
     }
 
     pub fn makes_spawn_food(&self) -> bool {
@@ -87,12 +98,13 @@ impl PacketSerialize for Perk {
         out.push(self.kind.enum_index() as u8);
         match self.kind {
             PerkKind::ReservedFood { owner, .. } => out.write_u16::<BE>(owner).unwrap(),
+            PerkKind::Mine(owner) => out.write_u16::<BE>(owner).unwrap(),
             _ => (),
         }
     }
 }
 
-#[derive(EnumIndex, Clone)]
+#[derive(EnumIndex, Clone, Debug)]
 enum PerkKind {
     Food(u16, bool),
     ReservedFood { strength: u16, owner: PlayerId },
@@ -100,6 +112,15 @@ enum PerkKind {
     Teleporter,
     SpeedBoost(u16),
     FoodFrenzy { count: u8, strength: u16 },
+    MinesTrail(u8),
+    Mine(PlayerId),
+}
+
+#[derive(Default, Debug)]
+pub struct PerkConsumption {
+    pub snake_change: Option<SnakeChange>,
+    pub additional_perks: Vec<Perk>,
+    pub should_die: bool,
 }
 
 pub struct Generator {
@@ -110,12 +131,12 @@ pub struct Generator {
     perk_spacing: u16,
     speed_boost: Option<u16>,
     food_frenzy: Option<u8>,
+    mines_trail: Option<u8>,
     enabled_perks_fn: Vec<fn(&Generator) -> Vec<Perk>>,
 }
 
 // Perk ideas:
 // - Invisible timer
-// - Mines spawn (random, behind tail, or head?), if person take 3 reserved foods in a row
 // - Multi snakes (like pinball)
 
 type PerkGeneratorFn = fn(&Generator) -> Vec<Perk>;
@@ -135,6 +156,9 @@ impl Generator {
             config
                 .food_frenzy
                 .map(|_| Generator::food_frenzy as PerkGeneratorFn),
+            config
+                .mines_trail
+                .map(|_| Generator::mines_trail as PerkGeneratorFn),
         ]
         .into_iter()
         .flatten()
@@ -151,6 +175,7 @@ impl Generator {
             perk_spacing: config.perk_spacing,
             speed_boost: config.speed_boost,
             food_frenzy: config.food_frenzy,
+            mines_trail: config.mines_trail,
             enabled_perks_fn,
         }
     }
@@ -201,5 +226,9 @@ impl Generator {
             count: self.food_frenzy.unwrap(),
             strength: self.food_strength,
         })]
+    }
+
+    fn mines_trail(&self) -> Vec<Perk> {
+        vec![Perk::new(PerkKind::MinesTrail(self.mines_trail.unwrap()))]
     }
 }

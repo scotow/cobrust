@@ -16,6 +16,7 @@ pub struct Config {
     pub teleporter: bool,
     pub speed_boost: Option<u16>,
     pub food_frenzy: Option<u8>,
+    pub mines_trail: Option<u8>,
 }
 
 impl Config {
@@ -39,6 +40,7 @@ impl Config {
         let teleporter = data.read_u8().ok()? > 0;
         let speed_boost = data.read_u16::<BE>().ok()?;
         let food_frenzy = data.read_u8().ok()?;
+        let mines_trail = data.read_u8().ok()?;
         let perk_spacing = data.read_u16::<BE>().ok()?;
 
         Some(Self {
@@ -53,6 +55,7 @@ impl Config {
             teleporter,
             speed_boost: (speed_boost > 0).then_some(speed_boost),
             food_frenzy: (food_frenzy > 0).then_some(food_frenzy),
+            mines_trail: (mines_trail > 0).then_some(mines_trail),
         })
     }
 
@@ -71,6 +74,10 @@ impl Config {
             && self
                 .food_frenzy
                 .map(|c| (2..=64).contains(&c))
+                .unwrap_or(true)
+            && self
+                .mines_trail
+                .map(|c| (1..=16).contains(&c))
                 .unwrap_or(true)
     }
 }
