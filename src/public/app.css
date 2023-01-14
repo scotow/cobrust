@@ -63,7 +63,7 @@ body.playing #game {
     width: 90%;
     max-width: 700px;
     height: 90%;
-    max-height: 450px;
+    max-height: 480px;
     transform: translate(-50%, -50%);
 }
 
@@ -391,46 +391,7 @@ body.playing #game {
     width: 14px;
     height: 14px;
     margin-right: 8px;
-    border-radius: 50%;
     vertical-align: middle;
-}
-
-#lobby > .rules > .content > .section > .perk > .color.food {
-    background: #2fbf71;
-}
-
-#lobby > .rules > .content > .section > .perk > .color.reserved-food {
-    position: relative;
-    background: #1e90ff;
-    transform: rotate(120deg);
-}
-
-#lobby > .rules > .content > .section > .perk > .color.reserved-food::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 14px;
-    height: 7px;
-    border-radius: 10.5px 10.5px 0 0;
-    background: #0c3b66;
-    transform: translate(-50%, 0);
-}
-
-#lobby > .rules > .content > .section > .perk > .color.reverser {
-    background: #f0c808;
-}
-
-#lobby > .rules > .content > .section > .perk > .color.teleporter {
-    background: #e7820e;
-}
-
-#lobby > .rules > .content > .section > .perk > .color.speed-boost {
-    background: #e70ed9;
-}
-
-#lobby > .rules > .content > .section > .perk > .color.food-frenzy {
-    background: #9e59ff;
 }
 
 #lobby > .rules > .content > .section > .perk > .info {

@@ -500,7 +500,7 @@ class Game {
                 this.context.fillStyle = '#9e59ff';
                 break;
             case 6:
-                this.context.fillStyle = '#614343';
+                this.context.fillStyle = '#e06565';
                 break;
             case 7:
                 this.context.fillStyle = perk.owner === this.selfId ? '#6b0000' : '#f00000';
