@@ -1,3 +1,5 @@
+const SPRITE_LENGTH = 16;
+const FRAME_SIZE = 64;
 const BORDER_WIDTH = 5;
 
 class Lobby {
@@ -284,7 +286,6 @@ class Game {
 
             const mainSize = document.getElementById('main').getBoundingClientRect();
             this.cellSize = Math.max(mainSize.width / this.size.width | 0, (mainSize.height + additionalHeight) / this.size.height | 0);
-            this.cellSpacing = this.cellSize > 50 ? 2 : this.cellSize > 20 ? 1 : 0;
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
 
@@ -335,12 +336,8 @@ class Game {
 
         for (const id in this.players) {
             const player = this.players[id];
-            this.fillMode(player.color[0]);
             for (let i = 0; i < player.body.length; i++) {
-                if (i === 1) {
-                    this.fillMode(player.color[1]);
-                }
-                this.drawCell(player.body[i]);
+                this.drawFrame(player, i);
             }
         }
         for (const coordStr in this.perks) {
@@ -349,54 +346,50 @@ class Game {
     }
 
     drawBorders() {
-        this.context.strokeStyle = 'white';
+        this.context.strokeStyle = '#ffffff';
         this.context.lineWidth = BORDER_WIDTH;
         this.context.strokeRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
 
     emptyCanvas() {
-        this.clearMode();
+        this.context.fillStyle = '#000000';
         this.context.fillRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
 
     setPlayers(data) {
         while (data.available) {
             const id = data.readUnsignedShort();
-            const color = [hslFromShort(data.readUnsignedShort()), hslFromShort(data.readUnsignedShort())];
+            const color = data.readUnsignedShort();
             const size = data.readUnsignedShort();
             const body = [];
-            this.fillMode(color[0]);
             for (let i = 0; i < size; i++) {
                 const cell = {
                     x: data.readUnsignedShort(),
                     y: data.readUnsignedShort(),
                 };
                 body.push(cell);
-                if (i === 1) {
-                    this.fillMode(color[1]);
-                }
-                this.drawCell(cell);
             }
-            this.players[id] = { color, body };
+            this.players[id] = { color, body, frames: generateFrames(color) };
+            for (let i = 0; i < body.length; i++) {
+                this.drawFrame(this.players[id], i);
+            }
         }
     }
 
     addPlayer(data) {
         const id = data.readUnsignedShort();
-        const color = [hslFromShort(data.readUnsignedShort()), hslFromShort(data.readUnsignedShort())];
+        const color = data.readUnsignedShort();
         const head = {
             x: data.readUnsignedShort(),
             y: data.readUnsignedShort(),
         };
-        this.players[id] = { color, body: [head] };
-        this.fillMode(color[0]);
-        this.drawCell(head);
+        this.players[id] = { color, body: [head], frames: generateFrames(color) };
+        this.drawFrame(this.players[id], 0);
     }
 
     removePlayer(data) {
         const id = data.readUnsignedShort();
-        this.clearMode();
-        this.drawCell(this.players[id].body);
+        this.clearCell(this.players[id].body);
         delete this.players[id];
     }
 
@@ -404,8 +397,9 @@ class Game {
         while (data.available) {
             switch (data.readUnsignedByte()) {
                 case 0: {
-                    this.clearMode();
-                    this.drawCell(this.players[data.readUnsignedShort()].body.pop());
+                    const player = this.players[data.readUnsignedShort()];
+                    this.clearCell(player.body.pop());
+                    this.drawFrame(player, player.body.length - 1);
                 } break;
                 case 1: {
                     const player = this.players[data.readUnsignedShort()];
@@ -416,31 +410,27 @@ class Game {
                     player.body.unshift(head);
                     delete this.perks[`${head.x},${head.y}`];
 
-                    this.fillMode(player.color[1]);
-                    this.drawCell(player.body[1]);
-                    this.fillMode(player.color[0]);
-                    this.drawCell(head);
+                    if (player.body.length >= 2) {
+                        this.drawFrame(player, 1);
+                    }
+                    this.drawFrame(player, 0);
                 } break;
                 case 2: {
                     const player = this.players[data.readUnsignedShort()];
-                    this.clearMode();
-                    this.drawCell(player.body);
+                    this.clearCell(player.body);
 
                     const head = {
                         x: data.readUnsignedShort(),
                         y: data.readUnsignedShort(),
                     };
                     player.body = [head];
-                    this.fillMode(player.color[0]);
-                    this.drawCell(head);
+                    this.drawFrame(player, 0);
                 } break;
                 case 3: {
                     const player = this.players[data.readUnsignedShort()];
-                    this.fillMode(player.color[1]);
-                    this.drawCell(player.body[0]);
                     player.body = player.body.reverse();
-                    this.fillMode(player.color[0]);
-                    this.drawCell(player.body[0]);
+                    this.drawFrame(player, 0);
+                    this.drawFrame(player, player.body.length - 1);
                 } break;
             }
         }
@@ -465,18 +455,136 @@ class Game {
         }
     }
 
-    clearMode() {
+    clearCell(coords) {
         this.context.fillStyle = '#000000';
-    }
-
-    fillMode(color) {
-        this.context.fillStyle = color;
-    }
-
-    drawCell(coords) {
         for (const { x, y } of coords instanceof Array ? coords : [coords]) {
-            this.context.fillRect(BORDER_WIDTH + x * this.cellSize + this.cellSpacing, BORDER_WIDTH + y * this.cellSize + this.cellSpacing, this.cellSize - this.cellSpacing * 2, this.cellSize - this.cellSpacing * 2);
+            this.context.fillRect(BORDER_WIDTH + x * this.cellSize, BORDER_WIDTH + y * this.cellSize, this.cellSize, this.cellSize);
         }
+    }
+
+    drawFrame(player, index) {
+        const forw = player.body[index - 1] ?? null;
+        const curr = player.body[index] ?? null;
+        const back = player.body[index + 1] ?? null;
+
+        let dx1 = null, dy1 = null, dx2 = null, dy2 = null;
+        if (forw !== null) {
+            if (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) {
+                dx1 = -1;
+            } else if (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) {
+                dx1 = 1;
+            } else {
+                dx1 = forw.x - curr.x;
+            }
+            if (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) {
+                dy1 = -1;
+            } else if (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) {
+                dy1 = 1;
+            } else {
+                dy1 = forw.y - curr.y;
+            }
+        }
+        if (back !== null) {
+            if (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1) {
+                dx2 = -1;
+            } else if (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1) {
+                dx2 = 1;
+            } else {
+                dx2 = curr.x - back.x;
+            }
+            if (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1) {
+                dy2 = -1;
+            } else if (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1) {
+                dy2 = 1;
+            } else {
+                dy2 = curr.y - back.y;
+            }
+        }
+
+        let frameIndex = 15;
+        if (forw !== null && back != null && (Math.abs(dx1) >= 2 || Math.abs(dy1) >= 2)) { // Teleported.
+            if (curr.x === back.x) {
+                if (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1) {
+                    frameIndex = 8;
+                } else if (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1) {
+                    frameIndex = 7;
+                }
+            } else if (curr.y === back.y) {
+                if (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1) {
+                    frameIndex = 10;
+                } else if (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1) {
+                    frameIndex = 9;
+                }
+            }
+        } else if (forw !== null && back != null && (Math.abs(dx2) >= 2 || Math.abs(dy2) >= 2)) {
+            if (forw.x === curr.x) {
+                if (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) {
+                    frameIndex = 7;
+                } else if (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) {
+                    frameIndex = 8;
+                }
+            } else if (forw.y === curr.y) {
+                if (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) {
+                    frameIndex = 9;
+                } else if (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) {
+                    frameIndex = 10;
+                }
+            }
+        } else if (forw === null && back === null) { // Egg / spawn.
+            frameIndex = 0;
+        } else {
+            if (forw === null) { // Head.
+                if (curr.x === back.x) {
+                    if (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1) {
+                        frameIndex = 11;
+                    } else if (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1) {
+                        frameIndex = 12;
+                    }
+                } else if (curr.y === back.y) {
+                    if (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1) {
+                        frameIndex = 13;
+                    } else if (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1) {
+                        frameIndex = 14;
+                    }
+                }
+            } else if (back === null) { // Tail.
+                if (forw.x === curr.x) {
+                    if (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) {
+                        frameIndex = 7;
+                    } else if (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) {
+                        frameIndex = 8;
+                    }
+                } else if (forw.y === curr.y) {
+                    if (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) {
+                        frameIndex = 9;
+                    } else if (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) {
+                        frameIndex = 10;
+                    }
+                }
+            } else { // Turns.
+                if (forw.x === curr.x && curr.x === back.x) {
+                    frameIndex = 5;
+                } else if (forw.y === curr.y && curr.y === back.y) {
+                    frameIndex = 6;
+                } else if (forw.x === curr.x && (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) && curr.y === back.y && (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1)
+                    || forw.y === curr.y && (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) && curr.x === back.x && (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1)
+                ) {
+                    frameIndex = 1;
+                } else if (forw.x === curr.x && (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) && curr.y === back.y && (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1)
+                    || forw.y === curr.y && (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) && curr.x === back.x && (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1)
+                ) {
+                    frameIndex = 2;
+                } else if (forw.x === curr.x && (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) && curr.y === back.y && (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1)
+                    || forw.y === curr.y && (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) && curr.x === back.x && (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1)) {
+                    frameIndex = 3;
+                } else if (forw.x === curr.x && (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) && curr.y === back.y && (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1)
+                    || forw.y === curr.y && (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) && curr.x === back.x && (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1)) {
+                    frameIndex = 4;
+                }
+            }
+        }
+        this.clearCell(curr);
+        this.context.drawImage(player.frames[frameIndex], BORDER_WIDTH + curr.x * this.cellSize, BORDER_WIDTH + curr.y * this.cellSize, this.cellSize, this.cellSize);
     }
 
     drawPerk(perk) {
@@ -515,10 +623,6 @@ class Game {
 
 function baseWebsocketUrl() {
     return `${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}`;
-}
-
-function hslFromShort(color) {
-    return `hsl(${color}, 100%, 50%)`;
 }
 
 function animateTitle() {
@@ -561,6 +665,53 @@ function animateTitle() {
         }
     }
 }
+
+function HslToRgb(h, s, l) {
+    s /= 100;
+    l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n =>
+        l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
+}
+
+function generateFrames(color) {
+    const [r, g, b] = HslToRgb(color, 100, 50);
+    const frames = [];
+    for (let f = 0; f < SPRITE_LENGTH; f++) {
+        const imageData = new ImageData(FRAME_SIZE, FRAME_SIZE);
+        for (let i = 0; i < FRAME_SIZE * FRAME_SIZE; i++) {
+            let pixelIndex = (f * FRAME_SIZE * FRAME_SIZE + i) * 4;
+            if (baseSpriteData[pixelIndex + 3] > 0) {
+                imageData.data[i * 4] = r / 255 * baseSpriteData[pixelIndex];
+                imageData.data[i * 4 + 1] = g / 255 * baseSpriteData[pixelIndex];
+                imageData.data[i * 4 + 2] = b / 255 * baseSpriteData[pixelIndex];
+                imageData.data[i * 4 + 3] = baseSpriteData[pixelIndex + 3];
+            }
+        }
+
+        const frame = document.createElement('canvas');
+        frame.width = FRAME_SIZE;
+        frame.height = FRAME_SIZE;
+        frame.getContext('2d').putImageData(imageData, 0, 0);
+        frames.push(frame);
+    }
+    return frames;
+}
+
+let baseSpriteData;
+const baseSpriteImage = new Image();
+baseSpriteImage.addEventListener("load", () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = FRAME_SIZE;
+    canvas.height = SPRITE_LENGTH * FRAME_SIZE;
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(baseSpriteImage, 0, 0);
+    baseSpriteData = ctx.getImageData(0, 0, FRAME_SIZE, SPRITE_LENGTH * FRAME_SIZE).data;
+});
+baseSpriteImage.src = 'sprite.png';
 
 new Lobby();
 animateTitle();

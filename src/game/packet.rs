@@ -16,7 +16,7 @@ pub enum Packet<'a> {
     Info(Size, &'a str, PlayerId),
     Snakes(Vec<(PlayerId, MutexGuard<'a, Player>)>),
     Perks(Vec<(Coord, Perk)>),
-    PlayerJoined(PlayerId, Coord, (u16, u16)),
+    PlayerJoined(PlayerId, Coord, u16),
     PlayerLeft(PlayerId),
     SnakeChanges(Vec<SnakeChange>),
 }
@@ -36,7 +36,7 @@ impl<'a> Packet<'a> {
             Packet::Snakes(players) => {
                 let mut packet = packet![cap players.len() * 64; 1u8];
                 for (id, player) in players {
-                    packet![packet; id, player.color.0, player.color.1, player.body.len() as u16];
+                    packet![packet; id, player.color, player.body.len() as u16];
                     for cell in &player.body {
                         packet![packet; cell.coord];
                     }
@@ -51,7 +51,7 @@ impl<'a> Packet<'a> {
                 packet
             }
             Packet::PlayerJoined(id, head, color) => {
-                packet![3u8, id, color.0, color.1, head]
+                packet![3u8, id, color, head]
             }
             Packet::PlayerLeft(id) => {
                 packet![4u8, id]
@@ -60,10 +60,10 @@ impl<'a> Packet<'a> {
                 let mut packet = packet![cap changes.len() * 4; 5u8];
                 for change in changes {
                     match change {
+                        SnakeChange::RemoveTail(id) => packet![packet; 0u8, id],
                         SnakeChange::AddCell(id, coord) => {
                             packet![packet; 1u8, id, coord]
                         }
-                        SnakeChange::RemoveTail(id) => packet![packet; 0u8, id],
                         SnakeChange::Die(id, coord) => {
                             packet![packet; 2u8, id, coord]
                         }
@@ -79,8 +79,8 @@ impl<'a> Packet<'a> {
 
 #[derive(Debug)]
 pub enum SnakeChange {
-    AddCell(PlayerId, Coord),
     RemoveTail(PlayerId),
+    AddCell(PlayerId, Coord),
     Die(PlayerId, Coord),
     Reverse(PlayerId),
 }

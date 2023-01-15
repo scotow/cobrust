@@ -7,7 +7,6 @@ use tokio::sync::Mutex;
 
 use crate::game::{coordinate::Coord, direction::Dir, perk::Perk, size::Size, speed::Speed};
 
-const COLOR_GAP: u16 = 60;
 const START_SIZE: u16 = 9;
 const TRAIL_PERK_SPACING: u16 = 10;
 
@@ -16,7 +15,7 @@ pub(super) type PlayerId = u16;
 #[derive(Debug)]
 pub struct Player {
     pub id: PlayerId,
-    pub color: (u16, u16),
+    pub color: u16,
     pub body: VecDeque<BodyCell>,
     direction: Mutex<Direction>,
     growth: u16,
@@ -79,13 +78,9 @@ impl BodyCell {
 
 impl Player {
     pub fn new(id: PlayerId, head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
-        let head_color = thread_rng().gen_range(0..360);
         Self {
             id,
-            color: (
-                head_color,
-                head_color + COLOR_GAP + thread_rng().gen_range(0..360 - COLOR_GAP * 2),
-            ),
+            color: thread_rng().gen_range(0..360),
             body: VecDeque::from([BodyCell::without_perk(head)]),
             direction: Mutex::new(Direction::default()),
             growth: START_SIZE,
