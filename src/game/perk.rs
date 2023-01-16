@@ -3,7 +3,7 @@ use std::{collections::HashMap, vec};
 use byteorder::{WriteBytesExt, BE};
 use enum_index::EnumIndex;
 use enum_index_derive::EnumIndex;
-use rand::random;
+use rand::{random, seq::SliceRandom, thread_rng};
 
 use crate::{
     game::{
@@ -163,9 +163,7 @@ impl Generator {
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
-        if !enabled_perks_fn.is_empty() {
-            enabled_perks_fn.rotate_right(1);
-        }
+        enabled_perks_fn.shuffle(&mut thread_rng());
 
         Self {
             food_consumed: 0,
