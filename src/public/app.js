@@ -27,7 +27,7 @@ class Lobby {
                 const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
                 const foodFrenzy = document.getElementById('create-food-frenzy').checked ? Number(document.getElementById('create-food-frenzy-count').value) : 0;
                 const minesTrail = document.getElementById('create-mines-trail').checked ? Number(document.getElementById('create-mines-trail-count').value) : 0;
-                const perkSpacing = Number(document.getElementById('create-perk-spacing').value);
+                const perkSpacing = document.getElementById('create-perk-spacing-group').classList.contains('hidden') ? 1 : Number(document.getElementById('create-perk-spacing').value);
 
                 const nameData = new ByteBuffer();
                 nameData.implicitGrowth = true;
@@ -56,6 +56,7 @@ class Lobby {
 
     setupEvents() {
         function updateForm() {
+            document.getElementById('create-perk-spacing-group').classList.toggle('hidden', Array.from(document.querySelectorAll('input[type=checkbox].perk')).every(perk => !perk.checked));
             document.getElementById('create-speed-boost-duration-group').classList.toggle('hidden', !document.getElementById('create-speed-boost').checked);
             document.getElementById('create-food-frenzy-count-group').classList.toggle('hidden', !document.getElementById('create-food-frenzy').checked);
             document.getElementById('create-mines-trail-count-group').classList.toggle('hidden', !document.getElementById('create-mines-trail').checked);
@@ -77,7 +78,7 @@ class Lobby {
             elem.addEventListener('keyup', updateForm);
         });
 
-        document.querySelectorAll('.toggle-other').forEach((elem) => {
+        document.querySelectorAll('.perk').forEach((elem) => {
             elem.addEventListener('change', updateForm);
         });
 
