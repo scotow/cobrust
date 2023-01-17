@@ -441,3 +441,7 @@ body.playing #game {
     background-repeat: no-repeat;
     vertical-align: middle;
 }
+
+#game > canvas {
+    background-color: rgba(0, 0, 0, 0.5);
+}

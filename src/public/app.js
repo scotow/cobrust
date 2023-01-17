@@ -293,6 +293,10 @@ class Game {
             const scale = Math.min((mainSize.width - 60) / this.canvas.width, (mainSize.height + additionalHeight - 27 - 60) / this.canvas.height);
             this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
             this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
+
+            for (const id in this.players) {
+                this.players[id].frames = this.generateFrames(this.players[id].color);
+            }
             this.redrawCanvas();
         };
         this.resizeHandler(87);
@@ -353,8 +357,7 @@ class Game {
     }
 
     emptyCanvas() {
-        this.context.fillStyle = '#000000';
-        this.context.fillRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
+        this.context.clearRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
     }
 
     setPlayers(data) {
@@ -370,7 +373,7 @@ class Game {
                 };
                 body.push(cell);
             }
-            this.players[id] = { color, body, frames: generateFrames(color) };
+            this.players[id] = { color, body, frames: this.generateFrames(color) };
             for (let i = 0; i < body.length; i++) {
                 this.drawFrame(this.players[id], i);
             }
@@ -384,7 +387,7 @@ class Game {
             x: data.readUnsignedShort(),
             y: data.readUnsignedShort(),
         };
-        this.players[id] = { color, body: [head], frames: generateFrames(color) };
+        this.players[id] = { color, body: [head], frames: this.generateFrames(color) };
         this.drawFrame(this.players[id], 0);
     }
 
@@ -459,7 +462,7 @@ class Game {
     clearCell(coords) {
         this.context.fillStyle = '#000000';
         for (const { x, y } of coords instanceof Array ? coords : [coords]) {
-            this.context.fillRect(BORDER_WIDTH + x * this.cellSize, BORDER_WIDTH + y * this.cellSize, this.cellSize, this.cellSize);
+            this.context.clearRect(BORDER_WIDTH + x * this.cellSize, BORDER_WIDTH + y * this.cellSize, this.cellSize, this.cellSize);
         }
     }
 
@@ -498,12 +501,10 @@ class Game {
         };
 
         this.clearCell(player.body[index]);
-        this.context.drawImage(
+        this.context.putImageData(
             player.frames[cellIndexToFrameIndex()],
             BORDER_WIDTH + player.body[index].x * this.cellSize,
             BORDER_WIDTH + player.body[index].y * this.cellSize,
-            this.cellSize,
-            this.cellSize
         );
     }
 
@@ -538,6 +539,33 @@ class Game {
         this.context.beginPath();
         this.context.arc(BORDER_WIDTH + perk.coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + perk.coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
         this.context.fill();
+    }
+
+    generateFrames(color) {
+        const [r, g, b] = hslToRgb(color, 100, 50);
+        const frames = [];
+
+        const canvas = document.createElement('canvas');
+        canvas.width = this.cellSize;
+        canvas.height = SPRITE_LENGTH * this.cellSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(baseSpriteImage, 0, 0, this.cellSize, SPRITE_LENGTH * this.cellSize);
+        const templateData = ctx.getImageData(0, 0, this.cellSize, SPRITE_LENGTH * this.cellSize).data;
+
+        for (let f = 0; f < SPRITE_LENGTH; f++) {
+            const imageData = new ImageData(this.cellSize, this.cellSize);
+            for (let i = 0; i < this.cellSize * this.cellSize; i++) {
+                let pixelIndex = (f * this.cellSize * this.cellSize + i) * 4;
+                if (templateData[pixelIndex + 3] > 0) {
+                    imageData.data[i * 4] = r / 255 * templateData[pixelIndex];
+                    imageData.data[i * 4 + 1] = g / 255 * templateData[pixelIndex];
+                    imageData.data[i * 4 + 2] = b / 255 * templateData[pixelIndex];
+                    imageData.data[i * 4 + 3] = templateData[pixelIndex + 3];
+                }
+            }
+            frames.push(imageData);
+        }
+        return frames;
     }
 }
 
@@ -600,42 +628,10 @@ function hslToRgb(h, s, l) {
     return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
 }
 
-function generateFrames(color) {
-    const [r, g, b] = hslToRgb(color, 100, 50);
-    const frames = [];
-    for (let f = 0; f < SPRITE_LENGTH; f++) {
-        const imageData = new ImageData(FRAME_SIZE, FRAME_SIZE);
-        for (let i = 0; i < FRAME_SIZE * FRAME_SIZE; i++) {
-            let pixelIndex = (f * FRAME_SIZE * FRAME_SIZE + i) * 4;
-            if (baseSpriteData[pixelIndex + 3] > 0) {
-                imageData.data[i * 4] = r / 255 * baseSpriteData[pixelIndex];
-                imageData.data[i * 4 + 1] = g / 255 * baseSpriteData[pixelIndex];
-                imageData.data[i * 4 + 2] = b / 255 * baseSpriteData[pixelIndex];
-                imageData.data[i * 4 + 3] = baseSpriteData[pixelIndex + 3];
-            }
-        }
+animateTitle();
 
-        const frame = document.createElement('canvas');
-        frame.width = FRAME_SIZE;
-        frame.height = FRAME_SIZE;
-        frame.getContext('2d').putImageData(imageData, 0, 0);
-        frames.push(frame);
-    }
-    return frames;
-}
-
-let baseSpriteData;
 const baseSpriteImage = new Image();
 baseSpriteImage.addEventListener("load", () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = FRAME_SIZE;
-    canvas.height = SPRITE_LENGTH * FRAME_SIZE;
-    const ctx = canvas.getContext('2d');
-
-    ctx.drawImage(baseSpriteImage, 0, 0);
-    baseSpriteData = ctx.getImageData(0, 0, FRAME_SIZE, SPRITE_LENGTH * FRAME_SIZE).data;
+    new Lobby();
 });
 baseSpriteImage.src = 'sprite.png';
-
-new Lobby();
-animateTitle();
