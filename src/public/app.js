@@ -464,128 +464,47 @@ class Game {
     }
 
     drawFrame(player, index) {
-        const forw = player.body[index - 1] ?? null;
-        const curr = player.body[index] ?? null;
-        const back = player.body[index + 1] ?? null;
+        const cellIndexToFrameIndex = () => {
+            if (index === 0 && player.body.length === 1) {
+                return 0; // Egg.
+            }
 
-        let dx1 = null, dy1 = null, dx2 = null, dy2 = null;
-        if (forw !== null) {
-            if (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) {
-                dx1 = -1;
-            } else if (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) {
-                dx1 = 1;
-            } else {
-                dx1 = forw.x - curr.x;
-            }
-            if (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) {
-                dy1 = -1;
-            } else if (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) {
-                dy1 = 1;
-            } else {
-                dy1 = forw.y - curr.y;
-            }
-        }
-        if (back !== null) {
-            if (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1) {
-                dx2 = -1;
-            } else if (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1) {
-                dx2 = 1;
-            } else {
-                dx2 = curr.x - back.x;
-            }
-            if (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1) {
-                dy2 = -1;
-            } else if (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1) {
-                dy2 = 1;
-            } else {
-                dy2 = curr.y - back.y;
-            }
-        }
+            const forw = player.body[index - 1] ?? null;
+            const curr = player.body[index] ?? null;
+            const back = player.body[index + 1] ?? null;
 
-        let frameIndex = 15;
-        if (forw !== null && back != null && (Math.abs(dx1) >= 2 || Math.abs(dy1) >= 2)) { // Teleported.
-            if (curr.x === back.x) {
-                if (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1) {
-                    frameIndex = 8;
-                } else if (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1) {
-                    frameIndex = 7;
+            let state = 0;
+            for (const [lhs, rhs] of [[curr, back], [forw, curr]]) {
+                state <<= 5;
+                if (lhs === null || rhs === null) {
+                    continue;
                 }
-            } else if (curr.y === back.y) {
-                if (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1) {
-                    frameIndex = 10;
-                } else if (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1) {
-                    frameIndex = 9;
-                }
-            }
-        } else if (forw !== null && back != null && (Math.abs(dx2) >= 2 || Math.abs(dy2) >= 2)) {
-            if (forw.x === curr.x) {
-                if (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) {
-                    frameIndex = 7;
-                } else if (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) {
-                    frameIndex = 8;
-                }
-            } else if (forw.y === curr.y) {
-                if (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) {
-                    frameIndex = 9;
-                } else if (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) {
-                    frameIndex = 10;
+
+                let dx = lhs.x.absDiff(rhs.x);
+                if (dx === this.size.width - 1) dx = 1;
+                let dy = lhs.y.absDiff(rhs.y);
+                if (dy === this.size.height - 1) dy = 1;
+
+                if (dx <= 1 && dy <= 1 && dx ^ dy === 1) {
+                    state |= 1 << 0;
+                    state |= (lhs.x - rhs.x === -1 || lhs.x - rhs.x === this.size.width - 1) << 1;
+                    state |= (lhs.x - rhs.x === 1 || lhs.x - rhs.x === -this.size.width + 1) << 2;
+                    state |= (lhs.y - rhs.y === -1 || lhs.y - rhs.y === this.size.height - 1) << 3;
+                    state |= (lhs.y - rhs.y === 1 || lhs.y - rhs.y === -this.size.height + 1) << 4;
                 }
             }
-        } else if (forw === null && back === null) { // Egg / spawn.
-            frameIndex = 0;
-        } else {
-            if (forw === null) { // Head.
-                if (curr.x === back.x) {
-                    if (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1) {
-                        frameIndex = 11;
-                    } else if (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1) {
-                        frameIndex = 12;
-                    }
-                } else if (curr.y === back.y) {
-                    if (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1) {
-                        frameIndex = 13;
-                    } else if (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1) {
-                        frameIndex = 14;
-                    }
-                }
-            } else if (back === null) { // Tail.
-                if (forw.x === curr.x) {
-                    if (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) {
-                        frameIndex = 7;
-                    } else if (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) {
-                        frameIndex = 8;
-                    }
-                } else if (forw.y === curr.y) {
-                    if (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) {
-                        frameIndex = 9;
-                    } else if (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) {
-                        frameIndex = 10;
-                    }
-                }
-            } else { // Turns.
-                if (forw.x === curr.x && curr.x === back.x) {
-                    frameIndex = 5;
-                } else if (forw.y === curr.y && curr.y === back.y) {
-                    frameIndex = 6;
-                } else if (forw.x === curr.x && (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) && curr.y === back.y && (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1)
-                    || forw.y === curr.y && (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) && curr.x === back.x && (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1)
-                ) {
-                    frameIndex = 1;
-                } else if (forw.x === curr.x && (forw.y - curr.y === -1 || forw.y - curr.y === this.size.height - 1) && curr.y === back.y && (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1)
-                    || forw.y === curr.y && (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) && curr.x === back.x && (curr.y - back.y === 1 || curr.y - back.y === -this.size.height + 1)
-                ) {
-                    frameIndex = 2;
-                } else if (forw.x === curr.x && (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) && curr.y === back.y && (curr.x - back.x === -1 || curr.x - back.x === this.size.width - 1)
-                    || forw.y === curr.y && (forw.x - curr.x === 1 || forw.x - curr.x === -this.size.width + 1) && curr.x === back.x && (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1)) {
-                    frameIndex = 3;
-                } else if (forw.x === curr.x && (forw.y - curr.y === 1 || forw.y - curr.y === -this.size.height + 1) && curr.y === back.y && (curr.x - back.x === 1 || curr.x - back.x === -this.size.width + 1)
-                    || forw.y === curr.y && (forw.x - curr.x === -1 || forw.x - curr.x === this.size.width - 1) && curr.x === back.x && (curr.y - back.y === -1 || curr.y - back.y === this.size.height - 1)) {
-                    frameIndex = 4;
-                }
-            }
-        }
-        this.clearCell(curr);
-        this.context.drawImage(player.frames[frameIndex], BORDER_WIDTH + curr.x * this.cellSize, BORDER_WIDTH + curr.y * this.cellSize, this.cellSize, this.cellSize);
+
+            return FRAMES_MAPPING.get(state << 1 | index === 0);
+        };
+
+        this.clearCell(player.body[index]);
+        this.context.drawImage(
+            player.frames[cellIndexToFrameIndex()],
+            BORDER_WIDTH + player.body[index].x * this.cellSize,
+            BORDER_WIDTH + player.body[index].y * this.cellSize,
+            this.cellSize,
+            this.cellSize
+        );
     }
 
     drawPerk(perk) {
@@ -667,7 +586,11 @@ function animateTitle() {
     }
 }
 
-function HslToRgb(h, s, l) {
+Number.prototype.absDiff = function (other) {
+    return other > this ? other - this : this - other;
+}
+
+function hslToRgb(h, s, l) {
     s /= 100;
     l /= 100;
     const k = n => (n + h / 30) % 12;
@@ -678,7 +601,7 @@ function HslToRgb(h, s, l) {
 }
 
 function generateFrames(color) {
-    const [r, g, b] = HslToRgb(color, 100, 50);
+    const [r, g, b] = hslToRgb(color, 100, 50);
     const frames = [];
     for (let f = 0; f < SPRITE_LENGTH; f++) {
         const imageData = new ImageData(FRAME_SIZE, FRAME_SIZE);
