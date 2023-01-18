@@ -7,14 +7,11 @@
   "env": {
     "browser": true
   },
-  "ignorePatterns": "byte-buffer.min.js",
+  "ignorePatterns": "*.min.js",
   "rules": {
     "class-methods-use-this": "off",
     "func-names": "off",
-    "indent": [
-      "error",
-      4
-    ],
+    "indent": ["error", 4],
     "max-classes-per-file": "off",
     "no-bitwise": "off",
     "no-continue": "off",
