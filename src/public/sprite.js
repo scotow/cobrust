@@ -1,6 +1,13 @@
+/* eslint-disable
+    no-unused-vars,
+    no-multi-spaces,
+    one-var,
+    one-var-declaration-per-line
+*/
+
 const FRAMES_MAPPING = (() => {
     const HEAD = 1;
-    const NOT_HEAD = NOT_SET = 0;
+    const NOT_HEAD = 0, NOT_SET = 0;
     const UP = 9;                           // 0b0100_1
     const DOWN = 17;                        // 0b1000_1
     const LEFT = 3;                         // 0b0001_1

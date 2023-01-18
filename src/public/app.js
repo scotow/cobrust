@@ -1,5 +1,6 @@
+/* global ByteBuffer, FRAMES_MAPPING */
+
 const SPRITE_LENGTH = 16;
-const FRAME_SIZE = 64;
 const BORDER_WIDTH = 5;
 
 class Lobby {
@@ -29,8 +30,7 @@ class Lobby {
                 const minesTrail = document.getElementById('create-mines-trail').checked ? Number(document.getElementById('create-mines-trail-count').value) : 0;
                 const perkSpacing = document.getElementById('create-perk-spacing-group').classList.contains('hidden') ? 1 : Number(document.getElementById('create-perk-spacing').value);
 
-                const nameData = new ByteBuffer();
-                nameData.implicitGrowth = true;
+                const nameData = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
                 const nameSize = nameData.writeString(name);
 
                 const data = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
@@ -56,7 +56,7 @@ class Lobby {
 
     setupEvents() {
         function updateForm() {
-            document.getElementById('create-perk-spacing-group').classList.toggle('hidden', Array.from(document.querySelectorAll('input[type=checkbox].perk')).every(perk => !perk.checked));
+            document.getElementById('create-perk-spacing-group').classList.toggle('hidden', Array.from(document.querySelectorAll('input[type=checkbox].perk')).every((perk) => !perk.checked));
             document.getElementById('create-speed-boost-duration-group').classList.toggle('hidden', !document.getElementById('create-speed-boost').checked);
             document.getElementById('create-food-frenzy-count-group').classList.toggle('hidden', !document.getElementById('create-food-frenzy').checked);
             document.getElementById('create-mines-trail-count-group').classList.toggle('hidden', !document.getElementById('create-mines-trail').checked);
@@ -94,18 +94,20 @@ class Lobby {
 
     processMessage(data) {
         switch (data.readUnsignedByte()) {
-            case 0:
-                this.addGames(data);
-                break;
-            case 1:
-                this.removeGame(data);
-                break;
-            case 2:
-                this.updatePlayerCount(data);
-                break;
-            case 3:
-                this.joinCreated(data);
-                break;
+        case 0:
+            this.addGames(data);
+            break;
+        case 1:
+            this.removeGame(data);
+            break;
+        case 2:
+            this.updatePlayerCount(data);
+            break;
+        case 3:
+            this.joinCreated(data);
+            break;
+        default:
+            break;
         }
     }
 
@@ -120,7 +122,9 @@ class Lobby {
             };
             const speed = data.readUnsignedByte();
             const playerCount = data.readUnsignedByte();
-            this.games[String(id)] = new LobbyGame(id, { name, size, speed, playerCount });
+            this.games[String(id)] = new LobbyGame(id, {
+                name, size, speed, playerCount,
+            });
         }
     }
 
@@ -181,7 +185,16 @@ class LobbyGame {
             new Game(id);
         });
 
-        this.game.append(name, size, separator.cloneNode(), speed, separator.cloneNode(), this.players, separator.cloneNode(), join);
+        this.game.append(
+            name,
+            size,
+            separator.cloneNode(),
+            speed,
+            separator.cloneNode(),
+            this.players,
+            separator.cloneNode(),
+            join,
+        );
         document.querySelector('#lobby > .games > .content').append(this.game);
     }
 
@@ -220,52 +233,56 @@ class Game {
 
     processMessage(data) {
         switch (data.readUnsignedByte()) {
-            case 0:
-                this.create(data);
-                break;
-            case 1:
-                this.setPlayers(data);
-                break;
-            case 2:
-                this.addPerks(data);
-                break;
-            case 3:
-                this.addPlayer(data);
-                break;
-            case 4:
-                this.removePlayer(data);
-                break;
-            case 5:
-                this.snakeChanges(data);
-                break;
+        case 0:
+            this.create(data);
+            break;
+        case 1:
+            this.setPlayers(data);
+            break;
+        case 2:
+            this.addPerks(data);
+            break;
+        case 3:
+            this.addPlayer(data);
+            break;
+        case 4:
+            this.removePlayer(data);
+            break;
+        case 5:
+            this.snakeChanges(data);
+            break;
+        default:
+            break;
         }
     }
 
     processSwipe(x, y) {
-        this.socket.send(new Uint8Array([0, Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : (y < 0 ? 0 : 1)]));
+        this.socket.send(
+            new Uint8Array([0, Math.abs(x) > Math.abs(y) ? (x < 0 ? 2 : 3) : (y < 0 ? 0 : 1)]),
+        );
     }
 
     processKey(event) {
         let key;
         switch (event.code) {
-            case 'ArrowUp':
-            case 'KeyW':
-                key = 0;
-                break;
-            case 'ArrowDown':
-            case 'KeyS':
-                key = 1;
-                break;
-            case 'ArrowLeft':
-            case 'KeyA':
-                key = 2;
-                break;
-            case 'ArrowRight':
-            case 'KeyD':
-                key = 3;
-                break;
-            default:
-                return;
+        case 'ArrowUp':
+        case 'KeyW':
+            key = 0;
+            break;
+        case 'ArrowDown':
+        case 'KeyS':
+            key = 1;
+            break;
+        case 'ArrowLeft':
+        case 'KeyA':
+            key = 2;
+            break;
+        case 'ArrowRight':
+        case 'KeyD':
+            key = 3;
+            break;
+        default:
+            return;
         }
         this.socket.send(new Uint8Array([0, key]));
     }
@@ -281,21 +298,27 @@ class Game {
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
         this.resizeHandler = (additionalHeight) => {
-            if (typeof additionalHeight !== "number") {
+            if (typeof additionalHeight !== 'number') {
                 additionalHeight = 0;
             }
 
             const mainSize = document.getElementById('main').getBoundingClientRect();
-            this.cellSize = Math.max(mainSize.width / this.size.width | 0, (mainSize.height + additionalHeight) / this.size.height | 0);
+            this.cellSize = Math.max(
+                Math.floor(mainSize.width / this.size.width),
+                Math.floor((mainSize.height + additionalHeight) / this.size.height),
+            );
             this.canvas.width = this.size.width * this.cellSize + 2 * BORDER_WIDTH;
             this.canvas.height = this.size.height * this.cellSize + 2 * BORDER_WIDTH;
 
-            const scale = Math.min((mainSize.width - 60) / this.canvas.width, (mainSize.height + additionalHeight - 27 - 60) / this.canvas.height);
-            this.canvas.style.width = `${this.canvas.width * scale | 0}px`;
-            this.canvas.style.height = `${this.canvas.height * scale | 0}px`;
+            const scale = Math.min(
+                (mainSize.width - 60) / this.canvas.width,
+                (mainSize.height + additionalHeight - 27 - 60) / this.canvas.height,
+            );
+            this.canvas.style.width = `${Math.floor(this.canvas.width * scale)}px`;
+            this.canvas.style.height = `${Math.floor(this.canvas.height * scale)}px`;
 
-            for (const id in this.players) {
-                this.players[id].frames = this.generateFrames(this.players[id].color);
+            for (const player of Object.values(this.players)) {
+                player.frames = this.generateFrames(player.color);
             }
             this.redrawCanvas();
         };
@@ -339,13 +362,12 @@ class Game {
         this.drawBorders();
         this.emptyCanvas();
 
-        for (const id in this.players) {
-            const player = this.players[id];
-            for (let i = 0; i < player.body.length; i++) {
+        for (const player of Object.values(this.players)) {
+            for (let i = 0; i < player.body.length; i += 1) {
                 this.drawFrame(player, i);
             }
         }
-        for (const coordStr in this.perks) {
+        for (const coordStr of Object.values(this.perks)) {
             this.drawPerk(this.perks[coordStr]);
         }
     }
@@ -353,11 +375,21 @@ class Game {
     drawBorders() {
         this.context.strokeStyle = '#ffffff';
         this.context.lineWidth = BORDER_WIDTH;
-        this.context.strokeRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
+        this.context.strokeRect(
+            BORDER_WIDTH,
+            BORDER_WIDTH,
+            this.canvas.width - 2 * BORDER_WIDTH,
+            this.canvas.height - 2 * BORDER_WIDTH,
+        );
     }
 
     emptyCanvas() {
-        this.context.clearRect(BORDER_WIDTH, BORDER_WIDTH, this.canvas.width - 2 * BORDER_WIDTH, this.canvas.height - 2 * BORDER_WIDTH);
+        this.context.clearRect(
+            BORDER_WIDTH,
+            BORDER_WIDTH,
+            this.canvas.width - 2 * BORDER_WIDTH,
+            this.canvas.height - 2 * BORDER_WIDTH,
+        );
     }
 
     setPlayers(data) {
@@ -366,7 +398,7 @@ class Game {
             const color = data.readUnsignedShort();
             const size = data.readUnsignedShort();
             const body = [];
-            for (let i = 0; i < size; i++) {
+            for (let i = 0; i < size; i += 1) {
                 const cell = {
                     x: data.readUnsignedShort(),
                     y: data.readUnsignedShort(),
@@ -374,7 +406,7 @@ class Game {
                 body.push(cell);
             }
             this.players[id] = { color, body, frames: this.generateFrames(color) };
-            for (let i = 0; i < body.length; i++) {
+            for (let i = 0; i < body.length; i += 1) {
                 this.drawFrame(this.players[id], i);
             }
         }
@@ -400,42 +432,44 @@ class Game {
     snakeChanges(data) {
         while (data.available) {
             switch (data.readUnsignedByte()) {
-                case 0: {
-                    const player = this.players[data.readUnsignedShort()];
-                    this.clearCell(player.body.pop());
-                    this.drawFrame(player, player.body.length - 1);
-                } break;
-                case 1: {
-                    const player = this.players[data.readUnsignedShort()];
-                    const head = {
-                        x: data.readUnsignedShort(),
-                        y: data.readUnsignedShort(),
-                    };
-                    player.body.unshift(head);
-                    delete this.perks[`${head.x},${head.y}`];
+            case 0: {
+                const player = this.players[data.readUnsignedShort()];
+                this.clearCell(player.body.pop());
+                this.drawFrame(player, player.body.length - 1);
+            } break;
+            case 1: {
+                const player = this.players[data.readUnsignedShort()];
+                const head = {
+                    x: data.readUnsignedShort(),
+                    y: data.readUnsignedShort(),
+                };
+                player.body.unshift(head);
+                delete this.perks[`${head.x},${head.y}`];
 
-                    if (player.body.length >= 2) {
-                        this.drawFrame(player, 1);
-                    }
-                    this.drawFrame(player, 0);
-                } break;
-                case 2: {
-                    const player = this.players[data.readUnsignedShort()];
-                    this.clearCell(player.body);
+                if (player.body.length >= 2) {
+                    this.drawFrame(player, 1);
+                }
+                this.drawFrame(player, 0);
+            } break;
+            case 2: {
+                const player = this.players[data.readUnsignedShort()];
+                this.clearCell(player.body);
 
-                    const head = {
-                        x: data.readUnsignedShort(),
-                        y: data.readUnsignedShort(),
-                    };
-                    player.body = [head];
-                    this.drawFrame(player, 0);
-                } break;
-                case 3: {
-                    const player = this.players[data.readUnsignedShort()];
-                    player.body = player.body.reverse();
-                    this.drawFrame(player, 0);
-                    this.drawFrame(player, player.body.length - 1);
-                } break;
+                const head = {
+                    x: data.readUnsignedShort(),
+                    y: data.readUnsignedShort(),
+                };
+                player.body = [head];
+                this.drawFrame(player, 0);
+            } break;
+            case 3: {
+                const player = this.players[data.readUnsignedShort()];
+                player.body = player.body.reverse();
+                this.drawFrame(player, 0);
+                this.drawFrame(player, player.body.length - 1);
+            } break;
+            default:
+                break;
             }
         }
     }
@@ -449,10 +483,12 @@ class Game {
             const id = data.readUnsignedByte();
             const perk = { coord, id };
             switch (id) {
-                case 1:
-                case 7:
-                    perk.owner = data.readUnsignedShort();
-                    break;
+            case 1:
+            case 7:
+                perk.owner = data.readUnsignedShort();
+                break;
+            default:
+                break;
             }
             this.perks[`${coord.x},${coord.y}`] = perk;
             this.drawPerk(perk);
@@ -462,7 +498,12 @@ class Game {
     clearCell(coords) {
         this.context.fillStyle = '#000000';
         for (const { x, y } of coords instanceof Array ? coords : [coords]) {
-            this.context.clearRect(BORDER_WIDTH + x * this.cellSize, BORDER_WIDTH + y * this.cellSize, this.cellSize, this.cellSize);
+            this.context.clearRect(
+                BORDER_WIDTH + x * this.cellSize,
+                BORDER_WIDTH + y * this.cellSize,
+                this.cellSize,
+                this.cellSize,
+            );
         }
     }
 
@@ -510,34 +551,40 @@ class Game {
 
     drawPerk(perk) {
         switch (perk.id) {
-            case 0:
-                this.context.fillStyle = '#2fbf71';
-                break;
-            case 1:
-                this.context.fillStyle = perk.owner === this.selfId ? '#1e90ff' : '#0c3b66';
-                break;
-            case 2:
-                this.context.fillStyle = '#f0c808';
-                break;
-            case 3:
-                this.context.fillStyle = '#e7820e';
-                break;
-            case 4:
-                this.context.fillStyle = '#e70ed9';
-                break;
-            case 5:
-                this.context.fillStyle = '#9e59ff';
-                break;
-            case 6:
-                this.context.fillStyle = '#e06565';
-                break;
-            case 7:
-                this.context.fillStyle = perk.owner === this.selfId ? '#6b0000' : '#f00000';
-                break;
-            default: return;
+        case 0:
+            this.context.fillStyle = '#2fbf71';
+            break;
+        case 1:
+            this.context.fillStyle = perk.owner === this.selfId ? '#1e90ff' : '#0c3b66';
+            break;
+        case 2:
+            this.context.fillStyle = '#f0c808';
+            break;
+        case 3:
+            this.context.fillStyle = '#e7820e';
+            break;
+        case 4:
+            this.context.fillStyle = '#e70ed9';
+            break;
+        case 5:
+            this.context.fillStyle = '#9e59ff';
+            break;
+        case 6:
+            this.context.fillStyle = '#e06565';
+            break;
+        case 7:
+            this.context.fillStyle = perk.owner === this.selfId ? '#6b0000' : '#f00000';
+            break;
+        default: return;
         }
         this.context.beginPath();
-        this.context.arc(BORDER_WIDTH + perk.coord.x * this.cellSize + this.cellSize / 2, BORDER_WIDTH + perk.coord.y * this.cellSize + this.cellSize / 2, this.cellSize / 4, 0, 2 * Math.PI);
+        this.context.arc(
+            BORDER_WIDTH + perk.coord.x * this.cellSize + this.cellSize / 2,
+            BORDER_WIDTH + perk.coord.y * this.cellSize + this.cellSize / 2,
+            this.cellSize / 4,
+            0,
+            2 * Math.PI,
+        );
         this.context.fill();
     }
 
@@ -550,12 +597,17 @@ class Game {
         canvas.height = SPRITE_LENGTH * this.cellSize;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(baseSpriteImage, 0, 0, this.cellSize, SPRITE_LENGTH * this.cellSize);
-        const templateData = ctx.getImageData(0, 0, this.cellSize, SPRITE_LENGTH * this.cellSize).data;
+        const templateData = ctx.getImageData(
+            0,
+            0,
+            this.cellSize,
+            SPRITE_LENGTH * this.cellSize,
+        ).data;
 
-        for (let f = 0; f < SPRITE_LENGTH; f++) {
+        for (let f = 0; f < SPRITE_LENGTH; f += 1) {
             const imageData = new ImageData(this.cellSize, this.cellSize);
-            for (let i = 0; i < this.cellSize * this.cellSize; i++) {
-                let pixelIndex = (f * this.cellSize * this.cellSize + i) * 4;
+            for (let i = 0; i < this.cellSize * this.cellSize; i += 1) {
+                const pixelIndex = (f * this.cellSize * this.cellSize + i) * 4;
                 if (templateData[pixelIndex + 3] > 0) {
                     imageData.data[i * 4] = r / 255 * templateData[pixelIndex];
                     imageData.data[i * 4 + 1] = g / 255 * templateData[pixelIndex];
@@ -570,41 +622,43 @@ class Game {
 }
 
 function baseWebsocketUrl() {
-    return `${location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${location.host}`;
+    return `${window.location.protocol.slice(0, -1) === 'https' ? 'wss' : 'ws'}://${window.location.host}`;
 }
 
-function animateTitle() {
+(function animateTitle() {
     const context = document.getElementById('title').getContext('2d');
     function fillCell(color, { x, y }, shift) {
         context.fillStyle = color;
         context.fillRect(x * 25 + 1, y * 25 + 1 + (shift ? 12 : 0), 23, 23);
     }
 
+    /* eslint-disable max-len */
     const letters = [
         {
             color: 'red',
-            frames: [[{ x: 2, y: 0 }], [{ x: 1, y: 0 }], [{ x: 0, y: 0 }], [{ x: 0, y: 1 }], [{ x: 0, y: 2 }], [{ x: 1, y: 2 }], [{ x: 2, y: 2 }], [{ x: 2, y: 3 }], [{ x: 2, y: 4 }], [{ x: 1, y: 4 }], [{ x: 0, y: 4 }]]
+            frames: [[{ x: 2, y: 0 }], [{ x: 1, y: 0 }], [{ x: 0, y: 0 }], [{ x: 0, y: 1 }], [{ x: 0, y: 2 }], [{ x: 1, y: 2 }], [{ x: 2, y: 2 }], [{ x: 2, y: 3 }], [{ x: 2, y: 4 }], [{ x: 1, y: 4 }], [{ x: 0, y: 4 }]],
         },
         {
             color: 'green',
-            frames: [[{ x: 4, y: 4 }], [{ x: 4, y: 3 }], [{ x: 4, y: 2 }], [{ x: 4, y: 1 }], [{ x: 4, y: 0 }], [{ x: 5, y: 0 }], [{ x: 6, y: 0 }], [{ x: 6, y: 0 }], [{ x: 6, y: 1 }], [{ x: 6, y: 2 }], [{ x: 6, y: 3 }], [{ x: 6, y: 4 }]]
+            frames: [[{ x: 4, y: 4 }], [{ x: 4, y: 3 }], [{ x: 4, y: 2 }], [{ x: 4, y: 1 }], [{ x: 4, y: 0 }], [{ x: 5, y: 0 }], [{ x: 6, y: 0 }], [{ x: 6, y: 0 }], [{ x: 6, y: 1 }], [{ x: 6, y: 2 }], [{ x: 6, y: 3 }], [{ x: 6, y: 4 }]],
         },
         {
             color: 'purple',
-            frames: [[{ x: 8, y: 4 }], [{ x: 8, y: 3 }], [{ x: 8, y: 2 }], [{ x: 8, y: 1 }], [{ x: 8, y: 0 }], [{ x: 9, y: 0 }], [{ x: 10, y: 0 }], [{ x: 10, y: 0 }], [{ x: 10, y: 1 }], [{ x: 10, y: 2 }, { x: 9, y: 2 }], [{ x: 10, y: 3 }], [{ x: 10, y: 4 }]]
+            frames: [[{ x: 8, y: 4 }], [{ x: 8, y: 3 }], [{ x: 8, y: 2 }], [{ x: 8, y: 1 }], [{ x: 8, y: 0 }], [{ x: 9, y: 0 }], [{ x: 10, y: 0 }], [{ x: 10, y: 0 }], [{ x: 10, y: 1 }], [{ x: 10, y: 2 }, { x: 9, y: 2 }], [{ x: 10, y: 3 }], [{ x: 10, y: 4 }]],
         },
         {
             color: 'blue',
-            frames: [[{ x: 12, y: 0 }], [{ x: 12, y: 1 }], [{ x: 12, y: 2 }], [{ x: 12, y: 3 }, { x: 13, y: 2 }], [{ x: 12, y: 4 }, { x: 14, y: 1 }, { x: 14, y: 3 }], [{ x: 14, y: 0 }, { x: 14, y: 4 }]]
+            frames: [[{ x: 12, y: 0 }], [{ x: 12, y: 1 }], [{ x: 12, y: 2 }], [{ x: 12, y: 3 }, { x: 13, y: 2 }], [{ x: 12, y: 4 }, { x: 14, y: 1 }, { x: 14, y: 3 }], [{ x: 14, y: 0 }, { x: 14, y: 4 }]],
         },
         {
             color: 'orange',
-            frames: [[{ x: 18, y: 0 }], [{ x: 17, y: 0 }], [{ x: 16, y: 0 }], [{ x: 16, y: 1 }], [{ x: 16, y: 2 }], [{ x: 16, y: 3 }, { x: 17, y: 2 }], [{ x: 16, y: 4 }], [{ x: 17, y: 4 }], [{ x: 18, y: 4 }]]
-        }
+            frames: [[{ x: 18, y: 0 }], [{ x: 17, y: 0 }], [{ x: 16, y: 0 }], [{ x: 16, y: 1 }], [{ x: 16, y: 2 }], [{ x: 16, y: 3 }, { x: 17, y: 2 }], [{ x: 16, y: 4 }], [{ x: 17, y: 4 }], [{ x: 18, y: 4 }]],
+        },
     ];
+    /* eslint-enable max-len */
 
-    for (let l = 0; l < letters.length; l++) {
-        for (let i = 0; i < letters[l].frames.length; i++) {
+    for (let l = 0; l < letters.length; l += 1) {
+        for (let i = 0; i < letters[l].frames.length; i += 1) {
             setTimeout(() => {
                 for (const cell of letters[l].frames[i]) {
                     fillCell(letters[l].color, cell, l % 2 === 1);
@@ -612,26 +666,23 @@ function animateTitle() {
             }, i * 100);
         }
     }
-}
+}());
 
 Number.prototype.absDiff = function (other) {
     return other > this ? other - this : this - other;
-}
+};
 
 function hslToRgb(h, s, l) {
     s /= 100;
     l /= 100;
-    const k = n => (n + h / 30) % 12;
+    const k = (n) => (n + h / 30) % 12;
     const a = s * Math.min(l, 1 - l);
-    const f = n =>
-        l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
     return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
 }
 
-animateTitle();
-
 const baseSpriteImage = new Image();
-baseSpriteImage.addEventListener("load", () => {
+baseSpriteImage.addEventListener('load', () => {
     new Lobby();
 });
 baseSpriteImage.src = 'sprite.png';

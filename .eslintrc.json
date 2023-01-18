@@ -1,0 +1,28 @@
+{
+  "extends": "airbnb-base",
+  "parserOptions": {
+    "sourceType": "script",
+    "ecmaVersion": "latest"
+  },
+  "env": {
+    "browser": true
+  },
+  "rules": {
+    "class-methods-use-this": "off",
+    "func-names": "off",
+    "indent": [
+      "error",
+      4
+    ],
+    "max-classes-per-file": "off",
+    "no-bitwise": "off",
+    "no-continue": "off",
+    "no-extend-native": "off",
+    "no-mixed-operators": "off",
+    "no-nested-ternary": "off",
+    "no-new": "off",
+    "no-param-reassign": "off",
+    "no-restricted-syntax": "off",
+    "no-use-before-define": "off"
+  }
+}
