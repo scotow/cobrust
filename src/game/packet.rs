@@ -5,7 +5,7 @@ use crate::{
     game::{
         coordinate::Coord,
         perk::Perk,
-        player::{Player, PlayerId},
+        player::{Color, Player, PlayerId},
         size::Size,
     },
     misc::PacketSerialize,
@@ -16,8 +16,9 @@ pub enum Packet<'a> {
     Info(Size, &'a str, PlayerId),
     Snakes(Vec<(PlayerId, MutexGuard<'a, Player>)>),
     Perks(Vec<(Coord, Perk)>),
-    PlayerJoined(PlayerId, Coord, u16),
+    PlayerJoined(PlayerId, Coord, Color),
     PlayerLeft(PlayerId),
+    ColorChange(PlayerId, Color),
     SnakeChanges(Vec<SnakeChange>),
 }
 
@@ -56,8 +57,11 @@ impl<'a> Packet<'a> {
             Packet::PlayerLeft(id) => {
                 packet![4u8, id]
             }
+            Packet::ColorChange(id, color) => {
+                packet![5u8, id, color]
+            }
             Packet::SnakeChanges(changes) => {
-                let mut packet = packet![cap changes.len() * 4; 5u8];
+                let mut packet = packet![cap changes.len() * 4; 6u8];
                 for change in changes {
                     match change {
                         SnakeChange::RemoveTail(id) => packet![packet; 0u8, id],

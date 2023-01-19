@@ -249,6 +249,9 @@ class Game {
             this.removePlayer(data);
             break;
         case 5:
+            this.changePlayerColor(data);
+            break;
+        case 6:
             this.snakeChanges(data);
             break;
         default:
@@ -263,28 +266,31 @@ class Game {
     }
 
     processKey(event) {
-        let key;
+        let data;
         switch (event.code) {
         case 'ArrowUp':
         case 'KeyW':
-            key = 0;
+            data = [0, 0];
             break;
         case 'ArrowDown':
         case 'KeyS':
-            key = 1;
+            data = [0, 1];
             break;
         case 'ArrowLeft':
         case 'KeyA':
-            key = 2;
+            data = [0, 2];
             break;
         case 'ArrowRight':
         case 'KeyD':
-            key = 3;
+            data = [0, 3];
+            break;
+        case 'KeyC':
+            data = [1];
             break;
         default:
             return;
         }
-        this.socket.send(new Uint8Array([0, key]));
+        this.socket.send(new Uint8Array(data));
     }
 
     create(data) {
@@ -336,9 +342,20 @@ class Game {
         title.classList.add('title');
         title.innerText = name;
 
+        const actions = document.createElement('div');
+        actions.classList.add('actions');
+
+        this.changeColor = document.createElement('div');
+        this.changeColor.classList.add('action', 'change-color', 'hidden');
+        this.changeColor.title = 'Change color';
+        this.changeColor.addEventListener('click', () => {
+            this.socket.send(new Uint8Array([1]));
+        });
+
         const leave = document.createElement('div');
-        leave.classList.add('leave');
+        leave.classList.add('action', 'leave');
         leave.innerText = 'Leave';
+        leave.title = 'Back to lobby';
         leave.addEventListener('click', () => {
             this.socket.close();
             window.removeEventListener('resize', this.resizeHandler);
@@ -353,7 +370,8 @@ class Game {
             }
         });
 
-        header.append(title, leave);
+        actions.append(this.changeColor, leave);
+        header.append(title, actions);
         document.getElementById('game').append(header, this.canvas);
         document.body.classList.replace('lobbying', 'playing');
     }
@@ -409,6 +427,9 @@ class Game {
             for (let i = 0; i < body.length; i += 1) {
                 this.drawFrame(this.players[id], i);
             }
+            if (id === this.selfId) {
+                this.updateChangeColorButton(color);
+            }
         }
     }
 
@@ -427,6 +448,28 @@ class Game {
         const id = data.readUnsignedShort();
         this.clearCell(this.players[id].body);
         delete this.players[id];
+    }
+
+    changePlayerColor(data) {
+        const id = data.readUnsignedShort();
+        const color = data.readUnsignedShort();
+        const player = this.players[id];
+        if (player === undefined) {
+            return;
+        }
+        player.color = color;
+        player.frames = this.generateFrames(color);
+        for (let i = 0; i < player.body.length; i += 1) {
+            this.drawFrame(player, i);
+        }
+        if (id === this.selfId) {
+            this.updateChangeColorButton(color);
+        }
+    }
+
+    updateChangeColorButton(color) {
+        this.changeColor.style.backgroundColor = `hsl(${color}, 100%, 50%)`;
+        this.changeColor.classList.remove('hidden');
     }
 
     snakeChanges(data) {

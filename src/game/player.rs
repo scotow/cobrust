@@ -11,11 +11,12 @@ const START_SIZE: u16 = 9;
 const TRAIL_PERK_SPACING: u16 = 10;
 
 pub(super) type PlayerId = u16;
+pub(super) type Color = u16;
 
 #[derive(Debug)]
 pub struct Player {
     pub id: PlayerId,
-    pub color: u16,
+    pub color: Color,
     pub body: VecDeque<BodyCell>,
     direction: Mutex<Direction>,
     growth: u16,
@@ -34,6 +35,12 @@ struct Direction {
 pub struct BodyCell {
     pub coord: Coord,
     pub perk: Option<Perk>,
+}
+
+impl BodyCell {
+    fn without_perk(coord: Coord) -> Self {
+        Self { coord, perk: None }
+    }
 }
 
 #[derive(Debug)]
@@ -70,17 +77,11 @@ impl PerkTrail {
     }
 }
 
-impl BodyCell {
-    fn without_perk(coord: Coord) -> Self {
-        Self { coord, perk: None }
-    }
-}
-
 impl Player {
     pub fn new(id: PlayerId, head: Coord, tx: SplitSink<WebSocket, Message>) -> Self {
         Self {
             id,
-            color: thread_rng().gen_range(0..360),
+            color: random_color(),
             body: VecDeque::from([BodyCell::without_perk(head)]),
             direction: Mutex::new(Direction::default()),
             growth: START_SIZE,
@@ -94,10 +95,12 @@ impl Player {
         let _ = self.sink.send(message).await;
     }
 
-    pub async fn process_event(&self, data: &[u8]) {
-        let new = match Dir::try_from(data[0]) {
-            Ok(dir) => dir,
-            Err(_) => return,
+    pub async fn process_move_event(&self, data: &[u8]) {
+        let Some(&id) = data.get(0) else {
+            return;
+        };
+        let Ok(new) = Dir::try_from(id) else {
+            return;
         };
 
         let mut direction = self.direction.lock().await;
@@ -190,4 +193,13 @@ impl Player {
         self.body.push_front(BodyCell::without_perk(coord));
         true
     }
+
+    pub fn change_color(&mut self) -> Color {
+        self.color = random_color();
+        self.color
+    }
+}
+
+fn random_color() -> Color {
+    thread_rng().gen_range(0..360)
 }

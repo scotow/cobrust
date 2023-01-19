@@ -63,7 +63,7 @@ body.playing #game {
     width: 90%;
     max-width: 700px;
     height: 90%;
-    max-height: 480px;
+    max-height: 520px;
     transform: translate(-50%, -50%);
 }
 
@@ -123,7 +123,7 @@ body.playing #game {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    background: #131313;
+    background-color: #131313;
     border: 3px solid #555;
     border-radius: 6px;
     overflow-y: auto;
@@ -191,14 +191,14 @@ body.playing #game {
     margin-bottom: 8px;
     padding: 8px;
     font-size: 16px;
-    background: #272B30;
+    background-color: #272B30;
     border-radius: 3px;
     cursor: pointer;
     transition: opacity 250ms;
 }
 
 #lobby > .games > .content > .game:hover {
-    background: #383e44;
+    background-color: #383e44;
 }
 
 #lobby > .games > .content > .game > .name {
@@ -210,7 +210,7 @@ body.playing #game {
 #lobby > .games > .content > .game > .separator {
     width: 1px;
     margin: 4px 10px;
-    background: white;
+    background-color: white;
 }
 
 #lobby > .games > .content > .game > .icon::after {
@@ -284,7 +284,7 @@ body.playing #game {
 #lobby > .create > .content > .settings > .section > .input.text > input {
     width: 100%;
     padding: 8px 12px;
-    background: #272B30;
+    background-color: #272B30;
     color: white;
     border: 1px solid black;
     border-radius: 3px;
@@ -307,7 +307,7 @@ body.playing #game {
 #lobby > .create > .content > .settings > .section > .input.number > input {
     width: 140px;
     padding: 8px 12px;
-    background: #272B30;
+    background-color: #272B30;
     color: white;
     border: 1px solid black;
     border-radius: 3px;
@@ -350,6 +350,10 @@ body.playing #game {
     opacity: 0.95;
 }
 
+#lobby > .create > .content > .actions > .process:active {
+    opacity: 0.8;
+}
+
 #lobby > .create > .content > .actions > .process.disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -376,7 +380,7 @@ body.playing #game {
     font-size: 14px;
     font-weight: bold;
     color: lightgray;
-    line-height: 1.4em;
+    line-height: 1.6em;
 }
 
 #lobby > .rules > .content > .section > .perk {
@@ -413,7 +417,7 @@ body.playing #game {
 #game > .header {
     display: flex;
     align-items: flex-end;
-    padding: 0 8px 2px;
+    padding: 0 0 4px 8px;
 }
 
 #game > .header > .title {
@@ -423,23 +427,54 @@ body.playing #game {
     text-align: left;
 }
 
-#game > .header > .leave {
-    margin-left: 12px;
-    font-size: 16px;
+#game > .header > .actions > .action {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 2px 0 4px;
+    padding: 4px 8px;
+    font-size: 14px;
     font-weight: bold;
-    text-decoration: underline;
+    border-radius: 3px;
+    vertical-align: middle;
     cursor: pointer;
+    transition: opacity 125ms;
 }
 
-#game > .header > .leave::after {
+#game > .header > .actions > .action:hover {
+    opacity: 0.95;
+}
+
+#game > .header > .actions > .action:active {
+    opacity: 0.8;
+}
+
+#game > .header > .actions > .action::after {
+    background-repeat: no-repeat;
+}
+
+#game > .header > .actions > .leave {
+    background-color: rgb(228, 149, 0);
+}
+
+#game > .header > .actions > .leave::after {
     content: '';
-    display: inline-block;
     width: 14px;
-    height: 26px;
+    height: 18px;
     margin-left: 6px;
     background-image: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTkgMjYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0wIDI0LjAwOThDMCAyNC42Mzk0IDAuNTE0Njg0IDI1LjE1NDEgMS4xNDQyMSAyNS4xNTQxQzEuNzgxMjQgMjUuMTU0MSAyLjI5NTkyIDI0LjYzOTQgMi4yOTU5MiAyNC4wMDk4VjIuOTMzODlDMi4yOTU5MiAyLjU0NjIzIDIuNTQ2MjMgMi4yOTU5MiAyLjkxMjU2IDIuMjk1OTJIMTUuNjQyOUMxNi4wMDkyIDIuMjk1OTIgMTYuMjU5NSAyLjU0NjIzIDE2LjI1OTUgMi45MzM4OVYyNC4wMDk4QzE2LjI1OTUgMjQuNjM5NCAxNi43NzQyIDI1LjE1NDEgMTcuNDEzMyAyNS4xNTQxQzE4LjA0MjkgMjUuMTU0MSAxOC41NTU0IDI0LjYzOTQgMTguNTU1NCAyNC4wMDk4VjIuNzIxNzhDMTguNTU1NCAxLjA3MjczIDE3LjQ3NTIgMCAxNS43ODU2IDBIMi43NzE5NEMxLjA4OTg0IDAgMCAxLjA3MjczIDAgMi43MjE3OFYyNC4wMDk4WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTMuNjkwMTkgMjQuMzYzN0MzLjY5MDE5IDI0LjYxMzggMy44OTI0NSAyNC43NDE2IDQuMTUwOTcgMjQuNjMzTDcuNzg4NDcgMjMuMDQ2M0M4LjA4NTY2IDIyLjkxNzQgOC4yMDkxNyAyMi44MDY4IDguMjA5MTcgMjIuNTA4NFY1LjgxMTUxQzguMjA5MTcgNS41MjA2NSA4LjA4NTY2IDUuNDAwNDEgNy43OTgwOCA1LjI4MzIzTDQuMTUwOTcgMy42ODQ3OUMzLjg5MjQ1IDMuNTc4MzggMy42OTAxOSAzLjcwNjExIDMuNjkwMTkgMy45NjU4VjI0LjM2MzdaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K);
-    background-repeat: no-repeat;
-    vertical-align: middle;
+}
+
+#game > .header > .actions > .change-color.hidden {
+    display: none;
+}
+
+#game > .header > .actions > .change-color::after {
+    content: '';
+    width: 18px;
+    height: 18px;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjYgMjkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xLjUzNjkxIDI2LjgzMTRDMy41Njk4OCAyOC44NjY1IDUuOTQ3ODQgMjguODg5OSA3Ljk0OTg3IDI2Ljg5MjFDOS4zNDQ2MyAyNS40OTc0IDEwLjgwOTcgMjIuMjU4OCAxMS44OTg2IDIwLjkxMjVMMTQuMzM1NyAyMy4zNjEzQzE1LjMxNTEgMjQuMzUyNCAxNi41MTU4IDI0LjM1NjcgMTcuNDY5NyAyMy4zOTg1TDE5LjAwNjcgMjEuODQ5OEMxOS45NjQ5IDIwLjg3OTkgMTkuOTU4NSAxOS43MTY1IDE4Ljk2OTUgMTguNzI3NUw5LjY1MjYgOS4zOTY3NUM4LjY2MTQzIDguNDAzNDggNy40ODYyOCA4LjM5Mzg3IDYuNTE2NDQgOS4zNjM3MUw0Ljk4MTUyIDEwLjkwODJDNC4wMjEyOSAxMS44Njg1IDQuMDEzNzkgMTMuMDQ5IDUuMDA5MTggMTQuMDQyM0w3LjQ1MzcxIDE2LjQ3OTNDNi4xMTkxOCAxNy41NjgyIDIuODgwNTggMTkuMDI1OCAxLjQ4NzkzIDIwLjQxODVDLTAuNTA5ODg1IDIyLjQyMDUgLTAuNDk4MTY3IDI0LjgwODEgMS41MzY5MSAyNi44MzE0Wk02Ljg2NTY1IDEyLjE3OUw3Ljc3NjkgMTEuMjg0OUM4LjA0MTUxIDExLjAyMjQgOC4zMjk1NiAxMS4wMTA2IDguNTk0MTcgMTEuMjc1M0wxNy4wOTg1IDE5Ljc2OTlDMTcuMzUzNSAyMC4wMzQ2IDE3LjM1MzUgMjAuMzI0NyAxNy4wNzkyIDIwLjU5ODlMMTYuMTk2OCAyMS40OTFDMTUuOTMwMSAyMS43NzY5IDE1LjYyNDkgMjEuNzg2NSAxNS4zNTYxIDIxLjUwMDZMMTIuNTQyNyAxOC42Nzc1QzEyLjA2NDggMTguMTk3NSAxMS40MzA2IDE4LjI0NDQgMTAuODg3OCAxOC43NzM0QzkuOTczNyAxOS42NzM2IDguMzgzIDIzLjUwMzggNi41MTMzOSAyNS4zNTk2QzUuNDQxMTIgMjYuNDQxNCA0LjE0NzE0IDI2LjQzOTMgMy4wMzIyMSAyNS4zMzYxQzEuOTM4NjIgMjQuMjMwOCAxLjkyNDc5IDIyLjkyMyAzLjAwNjY2IDIxLjg1MDdDNC44NzYyNyAxOS45OTcxIDguNzA0MzIgMTguNDA0MiA5LjYwNjY3IDE3LjQ4ODFDMTAuMTIzOSAxNi45Mzc4IDEwLjE4MDQgMTYuMzAzNSA5LjcwMDQyIDE1LjgzMzJMNi44NjU2NSAxMy4wMDU5QzYuNTk4OTMgMTIuNzQxMyA2LjU5ODkzIDEyLjQ0NTcgNi44NjU2NSAxMi4xNzlaTTQuNzQ1MDMgMjUuMDQyOUM1LjUxNDQ4IDI1LjA0MjkgNi4xMzU4MSAyNC40MTIgNi4xMzU4MSAyMy42NDQ2QzYuMTM1ODEgMjIuODc3MyA1LjUxNDQ4IDIyLjI1NiA0Ljc0NTAzIDIyLjI1NkMzLjk3NzY4IDIyLjI1NiAzLjM0Njc0IDIyLjg3NzMgMy4zNDY3NCAyMy42NDQ2QzMuMzQ2NzQgMjQuNDEyIDMuOTc3NjggMjUuMDQyOSA0Ljc0NTAzIDI1LjA0MjlaTTE4LjY1MDcgMjAuMTIzOEwyNC4zMTQyIDE0LjQ2MjVDMjUuNjcxOSAxMy4xMDI3IDI1LjY0NDIgMTEuNDY2IDI0LjI1MTQgMTAuMDcxTDE1LjAzOTUgMC44NDUzNDlDMTMuNzA3OCAtMC40ODYzNjYgMTEuNDYzMiAwLjA1NTI3MjMgMTEuMDA0MyAyLjA3NTExQzkuODcyMjIgNi45Njk3OSA5Ljg2MTIxIDcuMzY5ODcgOC4wMjYwNSA5LjkzNDY0TDkuNTc0MDkgMTEuNDc4NUMxMS43NTE0IDguNjc4ODUgMTEuODc2NCA3LjM1MTU5IDEyLjk5NzEgMy4yMjI4M0MxMy4xMzA1IDIuNzAxMTEgMTMuNTU5NCAyLjU2NTY0IDEzLjkxMTQgMi45MDgwN0wyMi42MTI4IDExLjU5OTlDMjMuMDk5MiAxMi4wODYyIDIzLjA5NzEgMTIuNjQzMyAyMi42NTAxIDEzLjA5MjRMMTcuMTM1NyAxOC42MDg5TDE4LjY1MDcgMjAuMTIzOFpNMTYuNzY1NCAxMy4yODM5QzE3LjM4NDQgMTMuOTA0OSAyMC44MDg0IDEyLjAwNjUgMjEuOTg5OSAxMC41MTgyTDE5LjQxMzkgNy45NTE4MkMxOS4xOTEyIDEwLjAyNiAxOC4xMTMxIDExLjUyNiAxNi44MDA2IDEyLjgzODVDMTYuNjQ4MiAxMi45OTA5IDE2LjY1OTkgMTMuMTgwNSAxNi43NjU0IDEzLjI4MzlaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K);
+    mix-blend-mode: difference;
+    transform: translate(2px, -1px);
 }
 
 #game > canvas {

@@ -156,7 +156,18 @@ impl Game {
                 break;
             };
             match data[0] {
-                0 => player.lock().await.process_event(&data[1..]).await,
+                0 => player.lock().await.process_move_event(&data[1..]).await,
+                1 => {
+                    let (id, new_color) = {
+                        let mut player = player.lock().await;
+                        (player.id, player.change_color())
+                    };
+                    self.inner
+                        .lock()
+                        .await
+                        .broadcast_message(Packet::ColorChange(id, new_color))
+                        .await;
+                }
                 _ => break,
             }
         }
