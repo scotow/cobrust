@@ -468,7 +468,7 @@ class Game {
     }
 
     updateChangeColorButton(color) {
-        this.changeColor.style.backgroundColor = `hsl(${color}, 100%, 50%)`;
+        this.changeColor.style.backgroundColor = `hsl(${color}, 100%, 35%)`;
         this.changeColor.classList.remove('hidden');
     }
 
