@@ -583,11 +583,10 @@ class Game {
     }
 
     drawFrame(body, index, frames) {
-        const cellIndexToFrameIndex = () => {
-            if (index === 0 && body.length === 1) {
-                return 0; // Egg.
-            }
-
+        let frameIndex;
+        if (index === 0 && body.length === 1) {
+            frameIndex = 0;
+        } else {
             const forw = body[index - 1] ?? null;
             const curr = body[index] ?? null;
             const back = body[index + 1] ?? null;
@@ -613,12 +612,12 @@ class Game {
                 }
             }
 
-            return FRAMES_MAPPING.get(state << 1 | index === 0);
-        };
+            frameIndex = FRAMES_MAPPING.get(state << 1 | index === 0);
+        }
 
         this.clearCell(body[index]);
         this.context.putImageData(
-            frames[cellIndexToFrameIndex()],
+            frames[frameIndex],
             BORDER_WIDTH + body[index].x * this.cellSize,
             BORDER_WIDTH + body[index].y * this.cellSize,
         );
