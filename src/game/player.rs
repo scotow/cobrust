@@ -9,6 +9,7 @@ use crate::game::{coordinate::Coord, direction::Dir, perk::Perk, size::Size, spe
 
 const START_SIZE: u16 = 9;
 const TRAIL_PERK_SPACING: u16 = 10;
+const COLOR_GAP: u16 = 60;
 
 pub(super) type PlayerId = u16;
 pub(super) type BodyId = u16;
@@ -101,7 +102,7 @@ impl Player {
         (
             Self {
                 id,
-                color: random_color(),
+                color: thread_rng().gen_range(0..360),
                 bodies: vec![body],
                 direction: Mutex::new(Direction::default()),
                 speed: 0,
@@ -260,11 +261,8 @@ impl Player {
     }
 
     pub fn change_color(&mut self) -> Color {
-        self.color = random_color();
+        self.color =
+            (self.color + COLOR_GAP + thread_rng().gen_range(0..360 - COLOR_GAP * 2)) % 360;
         self.color
     }
-}
-
-fn random_color() -> Color {
-    thread_rng().gen_range(0..360)
 }
