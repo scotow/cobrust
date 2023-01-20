@@ -336,14 +336,26 @@ body.playing #game {
 }
 
 #lobby > .create > .content > .actions > .process {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 4px 8px;
     font-size: 14px;
     font-weight: bold;
-    background: green;
+    background: rgb(29, 130, 29);
     border-radius: 3px;
     cursor: pointer;
     transition: opacity 125ms;
+}
+
+#lobby > .create > .content > .actions > .process::after {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-left: 4px;
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAgMTkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik05Ljk5MTIxIDE4Ljc0MjJDMTQuOTc0NiAxOC43NDIyIDE5LjA4NzkgMTQuNjI4OSAxOS4wODc5IDkuNjU0M0MxOS4wODc5IDQuNjc5NjkgMTQuOTY1OCAwLjU2NjQwNiA5Ljk4MjQyIDAuNTY2NDA2QzUuMDA3ODEgMC41NjY0MDYgMC45MDMzMiA0LjY3OTY5IDAuOTAzMzIgOS42NTQzQzAuOTAzMzIgMTQuNjI4OSA1LjAxNjYgMTguNzQyMiA5Ljk5MTIxIDE4Ljc0MjJaTTkuOTkxMjEgMTYuOTMxNkM1Ljk1NzAzIDE2LjkzMTYgMi43MzE0NSAxMy42ODg1IDIuNzMxNDUgOS42NTQzQzIuNzMxNDUgNS42MjAxMiA1Ljk1NzAzIDIuMzg1NzQgOS45ODI0MiAyLjM4NTc0QzE0LjAxNjYgMi4zODU3NCAxNy4yNTk4IDUuNjIwMTIgMTcuMjY4NiA5LjY1NDNDMTcuMjc3MyAxMy42ODg1IDE0LjAyNTQgMTYuOTMxNiA5Ljk5MTIxIDE2LjkzMTZaTTE0LjUyNjQgOS42NTQzQzE0LjUyNjQgOS40MTY5OSAxNC40Mzg1IDkuMjIzNjMgMTQuMjM2MyA5LjAzMDI3TDExLjI0OCA2LjA4NTk0QzExLjEwNzQgNS45NDUzMSAxMC45MzE2IDUuODc1IDEwLjcyMDcgNS44NzVDMTAuMzA3NiA1Ljg3NSAxMC4wMDg4IDYuMTgyNjIgMTAuMDA4OCA2LjU5NTdDMTAuMDA4OCA2LjgxNTQzIDEwLjEwNTUgNyAxMC4yMzczIDcuMTMxODRMMTEuMzAwOCA4LjE1MTM3TDEyLjI4NTIgOC45NTExN0wxMC40OTIyIDguODYzMjhINi4yMDMxMkM1Ljc1NDg4IDguODYzMjggNS40Mzg0OCA5LjE5NzI3IDUuNDM4NDggOS42NTQzQzUuNDM4NDggMTAuMTAyNSA1Ljc1NDg4IDEwLjQ0NTMgNi4yMDMxMiAxMC40NDUzSDEwLjQ5MjJMMTIuMjkzOSAxMC4zNjYyTDExLjMwOTYgMTEuMTU3MkwxMC4yMzczIDEyLjE3NjhDMTAuMDg3OSAxMi4zMDg2IDEwLjAwODggMTIuNDkzMiAxMC4wMDg4IDEyLjcxMjlDMTAuMDA4OCAxMy4xMjYgMTAuMzA3NiAxMy40NDI0IDEwLjcyMDcgMTMuNDQyNEMxMC45MzE2IDEzLjQ0MjQgMTEuMTA3NCAxMy4zNjMzIDExLjI0OCAxMy4yMjI3TDE0LjIzNjMgMTAuMjg3MUMxNC40Mjk3IDEwLjA5MzggMTQuNTI2NCA5LjkwMDM5IDE0LjUyNjQgOS42NTQzWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==);
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 #lobby > .create > .content > .actions > .process:hover {

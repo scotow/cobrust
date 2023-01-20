@@ -67,11 +67,15 @@ class Lobby {
 
         function createTabSelected() {
             const nameInput = document.getElementById('create-name');
-            if (!nameInput.value) {
+            if (!nameInput.value.trim()) {
                 nameInput.value = `Game ${1000 + Math.floor(Math.random() * 8999)}`;
-                nameInput.select();
+                if (shouldAutoKeyboard()) {
+                    nameInput.select();
+                    nameInput.focus();
+                }
+            } else if (shouldAutoKeyboard()) {
+                nameInput.focus();
             }
-            nameInput.focus();
             updateForm();
         }
 
@@ -745,6 +749,10 @@ function baseWebsocketUrl() {
 Number.prototype.absDiff = function (other) {
     return other > this ? other - this : this - other;
 };
+
+function shouldAutoKeyboard() {
+    return !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
 
 function hslToRgb(h, s, l) {
     s /= 100;
