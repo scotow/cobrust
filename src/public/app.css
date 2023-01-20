@@ -316,7 +316,7 @@ body.playing #game {
 
 #lobby > .create > .content > .settings > .section > .input.checkbox {
     display: inline-block;
-    margin: 0 20px 4px 0;
+    margin: 0 20px 8px 0;
 }
 
 #lobby > .create > .content > .settings > .section > .input.checkbox > .label {

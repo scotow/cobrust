@@ -10,7 +10,7 @@ use crate::{
         config::Config,
         coordinate::Coord,
         packet::SnakeChange,
-        player::{Player, PlayerId},
+        player::{BodyId, Player, PlayerId},
     },
     misc::PacketSerialize,
 };
@@ -36,6 +36,7 @@ impl Perk {
     pub async fn consume(
         &self,
         player_id: PlayerId,
+        body_id: BodyId,
         player: &mut Player,
         perks: &HashMap<Coord, Perk>,
     ) -> PerkConsumption {
@@ -53,7 +54,7 @@ impl Perk {
             }
             PerkKind::Teleporter => {
                 consumption.snake_change = async {
-                    let departure = player.body.front()?.coord;
+                    let departure = player.get_body(body_id)?.cells.front()?.coord;
                     let arrival = *perks
                         .iter()
                         .find(|(&coord, perk)| {
@@ -61,9 +62,9 @@ impl Perk {
                         })?
                         .0;
                     player
-                        .teleport(arrival)
+                        .teleport(body_id, arrival)
                         .await
-                        .then_some(SnakeChange::AddCell(player_id, arrival))
+                        .then_some(SnakeChange::AddCell(player_id, body_id, arrival))
                 }
                 .await;
             }
@@ -83,6 +84,9 @@ impl Perk {
                 if owner != player_id {
                     consumption.should_die = true;
                 }
+            }
+            PerkKind::MultiSnake => {
+                consumption.should_multiply = Some(2);
             }
         }
         consumption
@@ -114,6 +118,7 @@ enum PerkKind {
     FoodFrenzy { count: u8, strength: u16 },
     MinesTrail(u8),
     Mine(PlayerId),
+    MultiSnake,
 }
 
 #[derive(Default, Debug)]
@@ -121,6 +126,7 @@ pub struct PerkConsumption {
     pub snake_change: Option<SnakeChange>,
     pub additional_perks: Vec<Perk>,
     pub should_die: bool,
+    pub should_multiply: Option<u8>,
 }
 
 pub struct Generator {
@@ -159,6 +165,9 @@ impl Generator {
             config
                 .mines_trail
                 .map(|_| Generator::mines_trail as PerkGeneratorFn),
+            config
+                .multi_snake
+                .then_some(Generator::multi_snake as PerkGeneratorFn),
         ]
         .into_iter()
         .flatten()
@@ -228,5 +237,9 @@ impl Generator {
 
     fn mines_trail(&self) -> Vec<Perk> {
         vec![Perk::new(PerkKind::MinesTrail(self.mines_trail.unwrap()))]
+    }
+
+    fn multi_snake(&self) -> Vec<Perk> {
+        vec![Perk::new(PerkKind::MultiSnake)]
     }
 }

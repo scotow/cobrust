@@ -28,6 +28,7 @@ class Lobby {
                 const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
                 const foodFrenzy = document.getElementById('create-food-frenzy').checked ? Number(document.getElementById('create-food-frenzy-count').value) : 0;
                 const minesTrail = document.getElementById('create-mines-trail').checked ? Number(document.getElementById('create-mines-trail-count').value) : 0;
+                const multiSnake = document.getElementById('create-multi-snake').checked ? 1 : 0;
                 const perkSpacing = document.getElementById('create-perk-spacing-group').classList.contains('hidden') ? 1 : Number(document.getElementById('create-perk-spacing').value);
 
                 const nameData = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
@@ -48,6 +49,7 @@ class Lobby {
                 data.writeUnsignedShort(speedBoost);
                 data.writeUnsignedByte(foodFrenzy);
                 data.writeUnsignedByte(minesTrail);
+                data.writeUnsignedByte(multiSnake);
                 data.writeUnsignedShort(perkSpacing);
                 this.socket.send(data.buffer);
             });
@@ -381,12 +383,14 @@ class Game {
         this.emptyCanvas();
 
         for (const player of Object.values(this.players)) {
-            for (let i = 0; i < player.body.length; i += 1) {
-                this.drawFrame(player, i);
+            for (const body of Object.values(player.bodies)) {
+                for (let i = 0; i < body.length; i += 1) {
+                    this.drawFrame(body, i, player.frames);
+                }
             }
         }
-        for (const coordStr of Object.values(this.perks)) {
-            this.drawPerk(this.perks[coordStr]);
+        for (const perk of Object.values(this.perks)) {
+            this.drawPerk(perk);
         }
     }
 
@@ -412,57 +416,72 @@ class Game {
 
     setPlayers(data) {
         while (data.available) {
-            const id = data.readUnsignedShort();
+            const playerId = data.readUnsignedShort();
             const color = data.readUnsignedShort();
-            const size = data.readUnsignedShort();
-            const body = [];
-            for (let i = 0; i < size; i += 1) {
-                const cell = {
-                    x: data.readUnsignedShort(),
-                    y: data.readUnsignedShort(),
-                };
-                body.push(cell);
+            const frames = this.generateFrames(color);
+            const nbBody = data.readUnsignedByte();
+            const bodies = {};
+            for (let b = 0; b < nbBody; b += 1) {
+                const body = [];
+                const bodyId = data.readUnsignedShort();
+                const size = data.readUnsignedShort();
+                for (let i = 0; i < size; i += 1) {
+                    const cell = {
+                        x: data.readUnsignedShort(),
+                        y: data.readUnsignedShort(),
+                    };
+                    body.push(cell);
+                }
+                bodies[bodyId] = body;
+
+                for (let i = 0; i < size; i += 1) {
+                    this.drawFrame(body, i, frames);
+                }
             }
-            this.players[id] = { color, body, frames: this.generateFrames(color) };
-            for (let i = 0; i < body.length; i += 1) {
-                this.drawFrame(this.players[id], i);
-            }
-            if (id === this.selfId) {
+            this.players[playerId] = { color, bodies, frames: this.generateFrames(color) };
+
+            if (playerId === this.selfId) {
                 this.updateChangeColorButton(color);
             }
         }
     }
 
     addPlayer(data) {
-        const id = data.readUnsignedShort();
+        const playerId = data.readUnsignedShort();
+        const bodyId = data.readUnsignedShort();
         const color = data.readUnsignedShort();
-        const head = {
+        const bodies = {};
+        bodies[bodyId] = [{
             x: data.readUnsignedShort(),
             y: data.readUnsignedShort(),
-        };
-        this.players[id] = { color, body: [head], frames: this.generateFrames(color) };
-        this.drawFrame(this.players[id], 0);
+        }];
+        this.players[playerId] = { color, bodies, frames: this.generateFrames(color) };
+        this.drawFrame(bodies[bodyId], 0, this.players[playerId].frames);
     }
 
     removePlayer(data) {
-        const id = data.readUnsignedShort();
-        this.clearCell(this.players[id].body);
-        delete this.players[id];
+        const playerId = data.readUnsignedShort();
+        for (const body of Object.values(this.players[playerId].bodies)) {
+            this.clearCell(body);
+        }
+        delete this.players[playerId];
     }
 
     changePlayerColor(data) {
-        const id = data.readUnsignedShort();
+        const playerId = data.readUnsignedShort();
         const color = data.readUnsignedShort();
-        const player = this.players[id];
+        const player = this.players[playerId];
         if (player === undefined) {
             return;
         }
         player.color = color;
         player.frames = this.generateFrames(color);
-        for (let i = 0; i < player.body.length; i += 1) {
-            this.drawFrame(player, i);
+        for (const body of Object.values(player.bodies)) {
+            for (let i = 0; i < body.length; i += 1) {
+                this.drawFrame(body, i, player.frames);
+            }
         }
-        if (id === this.selfId) {
+        if (playerId === this.selfId) {
             this.updateChangeColorButton(color);
         }
     }
@@ -477,39 +496,49 @@ class Game {
             switch (data.readUnsignedByte()) {
             case 0: {
                 const player = this.players[data.readUnsignedShort()];
-                this.clearCell(player.body.pop());
-                this.drawFrame(player, player.body.length - 1);
+                const body = player.bodies[data.readUnsignedShort()];
+                this.clearCell(body.pop());
+                this.drawFrame(body, body.length - 1, player.frames);
             } break;
             case 1: {
                 const player = this.players[data.readUnsignedShort()];
+                const body = player.bodies[data.readUnsignedShort()];
                 const head = {
                     x: data.readUnsignedShort(),
                     y: data.readUnsignedShort(),
                 };
-                player.body.unshift(head);
+                body.unshift(head);
                 delete this.perks[`${head.x},${head.y}`];
 
-                if (player.body.length >= 2) {
-                    this.drawFrame(player, 1);
+                if (body.length >= 2) {
+                    this.drawFrame(body, 1, player.frames);
                 }
-                this.drawFrame(player, 0);
+                this.drawFrame(body, 0, player.frames);
             } break;
             case 2: {
                 const player = this.players[data.readUnsignedShort()];
-                this.clearCell(player.body);
-
+                const bodyId = data.readUnsignedShort();
                 const head = {
                     x: data.readUnsignedShort(),
                     y: data.readUnsignedShort(),
                 };
-                player.body = [head];
-                this.drawFrame(player, 0);
+                player.bodies[bodyId] = [head];
+                this.drawFrame(player.bodies[bodyId], 0, player.frames);
             } break;
             case 3: {
                 const player = this.players[data.readUnsignedShort()];
-                player.body = player.body.reverse();
-                this.drawFrame(player, 0);
-                this.drawFrame(player, player.body.length - 1);
+                const bodyId = data.readUnsignedShort();
+                this.clearCell(player.bodies[bodyId]);
+                delete player.bodies[bodyId];
+            } break;
+            case 4: {
+                const player = this.players[data.readUnsignedShort()];
+                for (const bodyId of Object.keys(player.bodies)) {
+                    const body = player.bodies[bodyId];
+                    player.bodies[bodyId] = body.reverse();
+                    this.drawFrame(body, 0, player.frames);
+                    this.drawFrame(body, body.length - 1, player.frames);
+                }
             } break;
             default:
                 break;
@@ -539,7 +568,6 @@ class Game {
     }
 
     clearCell(coords) {
-        this.context.fillStyle = '#000000';
         for (const { x, y } of coords instanceof Array ? coords : [coords]) {
             this.context.clearRect(
                 BORDER_WIDTH + x * this.cellSize,
@@ -550,15 +578,15 @@ class Game {
         }
     }
 
-    drawFrame(player, index) {
+    drawFrame(body, index, frames) {
         const cellIndexToFrameIndex = () => {
-            if (index === 0 && player.body.length === 1) {
+            if (index === 0 && body.length === 1) {
                 return 0; // Egg.
             }
 
-            const forw = player.body[index - 1] ?? null;
-            const curr = player.body[index] ?? null;
-            const back = player.body[index + 1] ?? null;
+            const forw = body[index - 1] ?? null;
+            const curr = body[index] ?? null;
+            const back = body[index + 1] ?? null;
 
             let state = 0;
             for (const [lhs, rhs] of [[curr, back], [forw, curr]]) {
@@ -584,11 +612,11 @@ class Game {
             return FRAMES_MAPPING.get(state << 1 | index === 0);
         };
 
-        this.clearCell(player.body[index]);
+        this.clearCell(body[index]);
         this.context.putImageData(
-            player.frames[cellIndexToFrameIndex()],
-            BORDER_WIDTH + player.body[index].x * this.cellSize,
-            BORDER_WIDTH + player.body[index].y * this.cellSize,
+            frames[cellIndexToFrameIndex()],
+            BORDER_WIDTH + body[index].x * this.cellSize,
+            BORDER_WIDTH + body[index].y * this.cellSize,
         );
     }
 
@@ -617,6 +645,9 @@ class Game {
             break;
         case 7:
             this.context.fillStyle = perk.owner === this.selfId ? '#6b0000' : '#f00000';
+            break;
+        case 8:
+            this.context.fillStyle = '#00ff4c';
             break;
         default: return;
         }

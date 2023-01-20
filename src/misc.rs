@@ -48,3 +48,12 @@ impl PacketSerialize for [u8] {
         out.extend_from_slice(self)
     }
 }
+
+impl<T: PacketSerialize> PacketSerialize for Option<T> {
+    fn push(&self, out: &mut Vec<u8>) {
+        out.push(self.is_some() as u8);
+        if let Some(inner) = self {
+            inner.push(out);
+        }
+    }
+}

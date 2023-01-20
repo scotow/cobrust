@@ -18,7 +18,7 @@ use crate::game::{
     config::Config,
     packet::SnakeChange,
     perk::{Generator, Perk},
-    player::PlayerId,
+    player::{BodyId, PlayerId},
     speed::Speed,
     tick::TickManager,
 };
@@ -89,20 +89,20 @@ impl Game {
 
         let head = inner.safe_place(self.size);
         let (tx, rx) = socket.split();
-        let id = rand::random();
-        let mut player = Player::new(id, head, tx);
+        let player_id = rand::random();
+        let (mut player, body_id) = Player::new(player_id, head, tx);
         let color = player.color;
         player
-            .send(Packet::Info(self.size, &self.name, id).message())
+            .send(Packet::Info(self.size, &self.name, player_id).message())
             .await;
 
         // Add player to game.
         inner
-            .broadcast_message(Packet::PlayerJoined(id, head, color))
+            .broadcast_message(Packet::PlayerJoined(player_id, body_id, head, color))
             .await;
         let player = Arc::new(Mutex::new(player));
-        inner.players.insert(id, Arc::clone(&player));
-        inner.grid[head.y][head.x] = Cell::Occupied(id);
+        inner.players.insert(player_id, Arc::clone(&player));
+        inner.grid[head.y][head.x] = Cell::Occupied(player_id);
 
         // Send snakes info.
         let snakes_message = Packet::Snakes(
@@ -134,15 +134,17 @@ impl Game {
 
         // Remove and clean player.
         let mut inner = self.inner.lock().await;
-        let player = inner.players.remove(&id).unwrap();
-        player
+        let player = inner.players.remove(&player_id).unwrap();
+        for cell in player
             .lock()
             .await
-            .body
-            .iter()
-            .for_each(|c| inner.grid[c.coord.y][c.coord.x] = Cell::Empty);
+            .bodies_iter()
+            .flat_map(|b| b.cells.iter())
+        {
+            inner.grid[cell.coord.y][cell.coord.x] = Cell::Empty
+        }
         inner.last_leave = Instant::now();
-        inner.broadcast_message(Packet::PlayerLeft(id)).await;
+        inner.broadcast_message(Packet::PlayerLeft(player_id)).await;
     }
 
     async fn player_loop(&self, player: Arc<Mutex<Player>>, mut rx: SplitStream<WebSocket>) {
@@ -213,61 +215,70 @@ impl Inner {
         let mut new_perks = Vec::new();
 
         // Free all tails.
-        for (id, _player, (removed, _new)) in walks.iter() {
-            if let Some(removed) = removed {
-                self.grid[removed.coord.y][removed.coord.x] = Cell::Empty;
-                changes.push(SnakeChange::RemoveTail(*id));
-                if let Some(perk) = &removed.perk {
-                    self.grid[removed.coord.y][removed.coord.x] = Cell::Perk(perk.clone());
-                    self.perks.insert(removed.coord, perk.clone());
-                    new_perks.push((removed.coord, perk.clone()));
+        for (player_id, _player, body_changes) in walks.iter() {
+            for (body_id, removed, _new) in body_changes {
+                if let Some(removed) = removed {
+                    self.grid[removed.coord.y][removed.coord.x] = Cell::Empty;
+                    changes.push(SnakeChange::RemoveTail(*player_id, *body_id));
+                    if let Some(perk) = &removed.perk {
+                        self.grid[removed.coord.y][removed.coord.x] = Cell::Perk(perk.clone());
+                        self.perks.insert(removed.coord, perk.clone());
+                        new_perks.push((removed.coord, perk.clone()));
+                    }
                 }
             }
         }
 
         // Create new heads, handle collisions and queue perks consumption.
-        let collisions = walks.iter().fold(
+        let collisions = walks.iter().flat_map(|w| &w.2).fold(
             HashMap::with_capacity(walks.len()),
-            |mut acc, (_, _, (_, new))| {
+            |mut acc, (_, _, new)| {
                 *acc.entry(new).or_insert(0u8) += 1;
                 acc
             },
         );
-        for (player_id, player, (_removed, new)) in walks.iter() {
-            match &self.grid[new.y][new.x] {
-                Cell::Empty => {
-                    if collisions[&new] == 1 {
-                        self.grid[new.y][new.x] = Cell::Occupied(*player_id);
-                        changes.push(SnakeChange::AddCell(*player_id, *new));
-                    } else {
-                        need_respawn.push((Arc::clone(player), false));
+        for (player_id, player, body_changes) in walks.iter() {
+            for (body_id, _removed, new) in body_changes {
+                match &self.grid[new.y][new.x] {
+                    Cell::Empty => {
+                        if collisions[&new] == 1 {
+                            self.grid[new.y][new.x] = Cell::Occupied(*player_id);
+                            changes.push(SnakeChange::AddCell(*player_id, *body_id, *new));
+                        } else {
+                            need_respawn.push((Arc::clone(player), *body_id, false));
+                        }
                     }
-                }
-                Cell::Occupied(_) => {
-                    need_respawn.push((Arc::clone(player), false));
-                }
-                Cell::Perk(perk) => {
-                    if collisions[&new] == 1 {
-                        perk_consumed.push((*player_id, Arc::clone(player), perk.clone()));
-                        self.grid[new.y][new.x] = Cell::Occupied(*player_id);
-                        self.perks.remove(new);
-                        changes.push(SnakeChange::AddCell(*player_id, *new));
-                    } else {
-                        need_respawn.push((Arc::clone(player), false));
+                    Cell::Occupied(_) => {
+                        need_respawn.push((Arc::clone(player), *body_id, false));
+                    }
+                    Cell::Perk(perk) => {
+                        if collisions[&new] == 1 {
+                            perk_consumed.push((
+                                *player_id,
+                                *body_id,
+                                Arc::clone(player),
+                                perk.clone(),
+                            ));
+                            self.grid[new.y][new.x] = Cell::Occupied(*player_id);
+                            self.perks.remove(new);
+                            changes.push(SnakeChange::AddCell(*player_id, *body_id, *new));
+                        } else {
+                            need_respawn.push((Arc::clone(player), *body_id, false));
+                        }
                     }
                 }
             }
         }
 
         // Consume perks and process respawns.
-        for (id, player, perk) in perk_consumed {
+        for (player_id, body_id, player, perk) in perk_consumed {
             let consumption = perk
-                .consume(id, &mut *player.lock().await, &self.perks)
+                .consume(player_id, body_id, &mut *player.lock().await, &self.perks)
                 .await;
 
             if let Some(change) = consumption.snake_change {
-                if let SnakeChange::AddCell(id, coord) = change {
-                    self.grid[coord.y][coord.x] = Cell::Occupied(id);
+                if let SnakeChange::AddCell(player_id, _body_id, coord) = change {
+                    self.grid[coord.y][coord.x] = Cell::Occupied(player_id);
                     self.perks.remove(&coord);
                 }
                 changes.push(change);
@@ -276,20 +287,36 @@ impl Inner {
                 let coord = self.add_perk(size, perk.clone());
                 new_perks.push((coord, perk));
             }
+            if let Some(count) = consumption.should_multiply {
+                let mut player_lock = player.lock().await;
+                for _ in 0..count {
+                    let head = self.safe_place(size);
+                    let new_body_id = player_lock.add_body(head);
+                    self.grid[head.y][head.x] = Cell::Occupied(player_id);
+                    changes.push(SnakeChange::AddBody(player_id, new_body_id, head));
+                }
+            }
             if consumption.should_die {
-                need_respawn.push((player, true));
+                need_respawn.push((player, body_id, true));
             }
 
             if perk.makes_spawn_food() {
-                for perk in self.perk_generator.next(id) {
+                for perk in self.perk_generator.next(player_id) {
                     let coord = self.add_perk(size, perk.clone());
                     new_perks.push((coord, perk));
                 }
             }
         }
-        for (player, clear_head) in need_respawn {
+        for (player, body_id, clear_head) in need_respawn {
             let mut player = player.lock().await;
-            changes.push(self.respawn_player(&mut player, clear_head, size).await);
+            self.clear_body(&mut player, body_id, clear_head).await;
+            changes.push(SnakeChange::RemoveBody(player.id, body_id));
+            if player.bodies_len() == 0 {
+                let head = self.safe_place(size);
+                let new_body_id = player.add_body(head);
+                self.grid[head.y][head.x] = Cell::Occupied(player.id);
+                changes.push(SnakeChange::AddBody(player.id, new_body_id, head));
+            }
         }
 
         if !changes.is_empty() {
@@ -324,21 +351,14 @@ impl Inner {
         coord
     }
 
-    async fn respawn_player(
-        &mut self,
-        player: &mut Player,
-        clear_head: bool,
-        size: Size,
-    ) -> SnakeChange {
-        player
-            .body
-            .iter()
+    async fn clear_body(&mut self, player: &mut Player, body_id: BodyId, clear_head: bool) {
+        let Some(cells) = player.remove_body(body_id).await else {
+            return;
+        };
+        cells
+            .into_iter()
             .skip(!clear_head as usize)
             .for_each(|c| self.grid[c.coord.y][c.coord.x] = Cell::Empty);
-        let head = self.safe_place(size);
-        player.respawn(head).await;
-        self.grid[head.y][head.x] = Cell::Occupied(player.id);
-        SnakeChange::Die(player.id, head)
     }
 
     async fn broadcast_message(&self, packet: Packet<'_>) {
