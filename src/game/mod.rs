@@ -36,6 +36,7 @@ mod tick;
 
 const EXIT_TIMEOUT: Duration = Duration::from_secs(60);
 
+#[derive(Debug)]
 pub struct Game {
     pub name: String,
     pub size: Size,
@@ -181,6 +182,7 @@ impl Game {
     }
 }
 
+#[derive(Debug)]
 struct Inner {
     grid: Vec<Vec<Cell>>,
     players: HashMap<PlayerId, Arc<Mutex<Player>>>,

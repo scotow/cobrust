@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
 use axum::extract::ws::Message;
+use enum_index::EnumIndex;
+use enum_index_derive::EnumIndex;
 
 use crate::{game::Game, lobby::GameId, misc::PacketSerialize, packet};
 
+#[derive(EnumIndex, Debug)]
 pub enum Packet<'a> {
     AddGames(Vec<(&'a GameId, &'a Arc<Game>)>),
     RemoveGame(GameId),
@@ -13,27 +16,26 @@ pub enum Packet<'a> {
 
 impl<'a> Packet<'a> {
     pub async fn message(self) -> Message {
-        let payload = match self {
+        let mut payload = packet![cap 128; self.enum_index()  as u8];
+        match self {
             Packet::AddGames(games) => {
-                let mut packet = packet![cap games.len() * 32; 0u8];
                 for (&id, game) in games {
-                    packet![packet; id,
+                    packet![payload; id,
                         game.name.as_bytes().len() as u8, game.name.as_bytes(),
                         game.size,
                         game.speed,
                         game.player_count().await as u8
                     ];
                 }
-                packet
             }
             Packet::RemoveGame(id) => {
-                packet![1u8, id]
+                packet![payload; id]
             }
             Packet::PlayerCount(id, count) => {
-                packet![2u8, id, count]
+                packet![payload; id, count]
             }
             Packet::GameCreated(id) => {
-                packet![3u8, id]
+                packet![payload; id]
             }
         };
         Message::Binary(payload)

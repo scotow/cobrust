@@ -1,6 +1,6 @@
 use crate::game::{perk::Perk, player::PlayerId};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Cell {
     Empty,
     Occupied(PlayerId),

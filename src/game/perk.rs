@@ -1,4 +1,8 @@
-use std::{collections::HashMap, vec};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Formatter},
+    vec,
+};
 
 use byteorder::{WriteBytesExt, BE};
 use enum_index::EnumIndex;
@@ -141,10 +145,6 @@ pub struct Generator {
     enabled_perks_fn: Vec<fn(&Generator) -> Vec<Perk>>,
 }
 
-// Perk ideas:
-// - Invisible timer
-// - Multi snakes (like pinball)
-
 type PerkGeneratorFn = fn(&Generator) -> Vec<Perk>;
 
 impl Generator {
@@ -241,5 +241,13 @@ impl Generator {
 
     fn multi_snake(&self) -> Vec<Perk> {
         vec![Perk::new(PerkKind::MultiSnake)]
+    }
+}
+
+impl Debug for Generator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Generator")
+            .field("enabled_perks", &self.enabled_perks_fn.len())
+            .finish()
     }
 }
