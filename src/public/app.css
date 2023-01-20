@@ -383,6 +383,31 @@ body.playing #game {
     line-height: 1.6em;
 }
 
+#lobby > .rules > .content > .section > .text > .paragraph:nth-last-child(n+2) {
+    margin-bottom: 10px;
+}
+
+#lobby > .rules > .content .key-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#lobby > .rules > .content .key {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    color: white;
+    background-color: gray;
+    border: 1px solid white;
+    border-radius: 2px;
+    box-shadow: 1px 1px 1px lightblue;
+    transform: translateY(-1px);
+}
+
 #lobby > .rules > .content > .section > .perk {
     margin-bottom: 10px;
     font-size: 14px;
