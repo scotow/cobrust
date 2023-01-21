@@ -174,16 +174,9 @@ impl Player {
         grid_size: Size,
     ) -> Option<Vec<(BodyId, Option<BodyCell>, Coord)>> {
         let mut direction = self.direction.lock().await;
-        let new_direction = if !direction.queue.is_empty() {
-            let dir = direction.queue.pop_front().unwrap();
-            direction.current = Some(dir);
-            dir
-        } else {
-            match direction.current {
-                Some(dir) => dir,
-                None => return None,
-            }
-        };
+        let new_direction = direction.queue.pop_front().or(direction.current)?;
+        direction.current = Some(new_direction);
+        drop(direction);
 
         let mut changes = Vec::with_capacity(self.bodies.len());
         let mine = self.perk_trail.next(self.id);

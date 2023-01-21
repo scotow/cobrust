@@ -154,11 +154,14 @@ impl Game {
                 Some(Ok(message)) => message,
                 _ => break,
             };
-
             let Message::Binary(data) = message else {
                 break;
             };
-            match data[0] {
+            let Some(message_id) = data.get(0) else {
+                break;
+            };
+
+            match message_id {
                 0 => player.lock().await.process_move_event(&data[1..]).await,
                 1 => {
                     let (id, new_color) = {
