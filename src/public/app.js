@@ -7,52 +7,26 @@ class Lobby {
     constructor() {
         this.games = {};
         this.setupEvents();
+        this.connect();
+    }
 
+    connect() {
         this.socket = new WebSocket(`${baseWebsocketUrl()}/lobby`);
         this.socket.binaryType = 'arraybuffer';
         this.socket.addEventListener('open', () => {
             this.socket.addEventListener('message', (event) => {
                 this.processMessage(new ByteBuffer(event.data));
             });
+        });
+        this.socket.addEventListener('close', () => {
+            for (const game of document.querySelectorAll('#lobby > .games .game')) {
+                game.remove();
+            }
+            this.games = {};
 
-            document.getElementById('create-join').addEventListener('click', () => {
-                const name = document.getElementById('create-name').value;
-                const width = Number(document.getElementById('create-width').value);
-                const height = Number(document.getElementById('create-height').value);
-                const speed = Number(document.getElementById('create-speed').value);
-                const foods = Number(document.getElementById('create-foods').value);
-                const foodStrength = Number(document.getElementById('create-food-strength').value);
-                const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
-                const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
-                const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
-                const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
-                const foodFrenzy = document.getElementById('create-food-frenzy').checked ? Number(document.getElementById('create-food-frenzy-count').value) : 0;
-                const minesTrail = document.getElementById('create-mines-trail').checked ? Number(document.getElementById('create-mines-trail-count').value) : 0;
-                const multiSnake = document.getElementById('create-multi-snake').checked ? 1 : 0;
-                const perkSpacing = document.getElementById('create-perk-spacing-group').classList.contains('hidden') ? 1 : Number(document.getElementById('create-perk-spacing').value);
-
-                const nameData = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
-                const nameSize = nameData.writeString(name);
-
-                const data = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
-                data.writeUnsignedByte(0);
-                data.writeUnsignedShort(nameSize);
-                data.write(nameData);
-                data.writeUnsignedShort(width);
-                data.writeUnsignedShort(height);
-                data.writeUnsignedByte(speed);
-                data.writeUnsignedShort(foods);
-                data.writeUnsignedShort(foodStrength);
-                data.writeUnsignedByte(reservedFood);
-                data.writeUnsignedByte(reverser);
-                data.writeUnsignedByte(teleporter);
-                data.writeUnsignedShort(speedBoost);
-                data.writeUnsignedByte(foodFrenzy);
-                data.writeUnsignedByte(minesTrail);
-                data.writeUnsignedByte(multiSnake);
-                data.writeUnsignedShort(perkSpacing);
-                this.socket.send(data.buffer);
-            });
+            setTimeout(() => {
+                this.connect();
+            }, 2000);
         });
     }
 
@@ -95,6 +69,49 @@ class Lobby {
                 document.getElementById('tab-create').checked = true;
                 createTabSelected();
             }
+        });
+
+        document.getElementById('create-join').addEventListener('click', () => {
+            if (this.socket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            const name = document.getElementById('create-name').value;
+            const width = Number(document.getElementById('create-width').value);
+            const height = Number(document.getElementById('create-height').value);
+            const speed = Number(document.getElementById('create-speed').value);
+            const foods = Number(document.getElementById('create-foods').value);
+            const foodStrength = Number(document.getElementById('create-food-strength').value);
+            const reservedFood = document.getElementById('create-reserved-food').checked ? 1 : 0;
+            const reverser = document.getElementById('create-reverser').checked ? 1 : 0;
+            const teleporter = document.getElementById('create-teleporter').checked ? 1 : 0;
+            const speedBoost = document.getElementById('create-speed-boost').checked ? Number(document.getElementById('create-speed-boost-duration').value) : 0;
+            const foodFrenzy = document.getElementById('create-food-frenzy').checked ? Number(document.getElementById('create-food-frenzy-count').value) : 0;
+            const minesTrail = document.getElementById('create-mines-trail').checked ? Number(document.getElementById('create-mines-trail-count').value) : 0;
+            const multiSnake = document.getElementById('create-multi-snake').checked ? 1 : 0;
+            const perkSpacing = document.getElementById('create-perk-spacing-group').classList.contains('hidden') ? 1 : Number(document.getElementById('create-perk-spacing').value);
+
+            const nameData = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
+            const nameSize = nameData.writeString(name);
+
+            const data = new ByteBuffer(0, ByteBuffer.BIG_ENDIAN, true);
+            data.writeUnsignedByte(0);
+            data.writeUnsignedShort(nameSize);
+            data.write(nameData);
+            data.writeUnsignedShort(width);
+            data.writeUnsignedShort(height);
+            data.writeUnsignedByte(speed);
+            data.writeUnsignedShort(foods);
+            data.writeUnsignedShort(foodStrength);
+            data.writeUnsignedByte(reservedFood);
+            data.writeUnsignedByte(reverser);
+            data.writeUnsignedByte(teleporter);
+            data.writeUnsignedShort(speedBoost);
+            data.writeUnsignedByte(foodFrenzy);
+            data.writeUnsignedByte(minesTrail);
+            data.writeUnsignedByte(multiSnake);
+            data.writeUnsignedShort(perkSpacing);
+            this.socket.send(data.buffer);
         });
     }
 
@@ -235,6 +252,11 @@ class Game {
             window.addEventListener('touchstart', this.swipeStartEventHandler);
             window.addEventListener('touchend', this.swipeEndEventHandler);
         });
+        this.closeEventHandler = () => {
+            window.alert('The connection to the game instance was lost.');
+            this.leave();
+        };
+        this.socket.addEventListener('close', this.closeEventHandler);
     }
 
     processMessage(data) {
@@ -363,23 +385,28 @@ class Game {
         leave.innerText = 'Leave';
         leave.title = 'Back to lobby';
         leave.addEventListener('click', () => {
+            this.socket.removeEventListener('close', this.closeEventHandler);
             this.socket.close();
-            window.removeEventListener('resize', this.resizeHandler);
-            window.removeEventListener('keydown', this.keyEventHandler);
-            window.removeEventListener('touchstart', this.swipeStartEventHandler);
-            window.removeEventListener('touchend', this.swipeEndEventHandler);
-
-            document.body.classList.replace('playing', 'lobbying');
-            const game = document.getElementById('game');
-            while (game.firstChild) {
-                game.removeChild(game.lastChild);
-            }
+            this.leave();
         });
 
         actions.append(this.changeColor, leave);
         header.append(title, actions);
         document.getElementById('game').append(header, this.canvas);
         document.body.classList.replace('lobbying', 'playing');
+    }
+
+    leave() {
+        window.removeEventListener('resize', this.resizeHandler);
+        window.removeEventListener('keydown', this.keyEventHandler);
+        window.removeEventListener('touchstart', this.swipeStartEventHandler);
+        window.removeEventListener('touchend', this.swipeEndEventHandler);
+
+        document.body.classList.replace('playing', 'lobbying');
+        const game = document.getElementById('game');
+        while (game.firstChild) {
+            game.removeChild(game.lastChild);
+        }
     }
 
     redrawCanvas() {
