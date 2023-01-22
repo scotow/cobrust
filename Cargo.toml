@@ -1,6 +1,6 @@
 [package]
 name = "cobrust"
-version = "0.15.2"
+version = "0.16.0"
 authors = ["Scotow <contact@scotow.com>"]
 edition = "2021"
 
@@ -8,10 +8,12 @@ edition = "2021"
 async-trait = "0.1.60"
 axum = { version = "0.6.1", default-features = false, features = ["http1", "ws"] }
 byteorder = "1.4.3"
+clap = { version = "4.0.32", features = ["derive", "wrap_help"] }
 enum_index = "0.2.0"
 enum_index_derive = "0.2.0"
 env_logger = "0.10.0"
 futures = "0.3.25"
+log = "0.4.17"
 rand = "0.8.5"
 rust-embed = "6.4.2"
 tokio = { version = "1.23.0", features = ["sync", "rt-multi-thread", "macros"] }
